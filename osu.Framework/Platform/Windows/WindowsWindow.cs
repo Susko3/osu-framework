@@ -3,6 +3,7 @@
 
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using osu.Framework.Platform.Windows.Native;
 using SDL2;
@@ -33,6 +34,9 @@ namespace osu.Framework.Platform.Windows
                 // API doesn't exist on Windows 7 so it needs to be allowed to fail silently.
             }
         }
+
+        public void UpdateMouseRelativeSpeedScale(double scale) => ScheduleCommand(() =>
+            SDL.SDL_SetHint(SDL.SDL_HINT_MOUSE_RELATIVE_SPEED_SCALE, scale.ToString(CultureInfo.InvariantCulture)));
 
         protected override Size SetBorderless()
         {

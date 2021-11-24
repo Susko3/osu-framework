@@ -23,22 +23,24 @@ namespace osu.Framework.Platform.Windows
         private const int raw_input_coordinate_space = 65535;
 
         private SDL.SDL_WindowsMessageHook callback;
-        private SDL2DesktopWindow window;
+        private WindowsWindow window;
 
         public override bool IsActive => Enabled.Value;
 
         public override bool Initialize(GameHost host)
         {
-            if (!(host.Window is SDL2DesktopWindow desktopWindow))
+            if (!(host.Window is WindowsWindow windowsWindow))
                 return false;
 
-            window = desktopWindow;
+            window = windowsWindow;
             callback = (ptr, wnd, u, param, l) => onWndProc(ptr, wnd, u, param, l);
 
             Enabled.BindValueChanged(enabled =>
             {
                 host.InputThread.Scheduler.Add(() => SDL.SDL_SetWindowsMessageHook(enabled.NewValue ? callback : null, IntPtr.Zero));
             }, true);
+
+            Sensitivity.BindValueChanged(scale => window.UpdateMouseRelativeSpeedScale(scale.NewValue));
 
             return base.Initialize(host);
         }
