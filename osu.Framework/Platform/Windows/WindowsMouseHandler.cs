@@ -45,6 +45,16 @@ namespace osu.Framework.Platform.Windows
             return base.Initialize(host);
         }
 
+        public override void FeedbackMousePositionChange(Vector2 position, bool isSelfFeedback)
+        {
+            if (!Enabled.Value)
+                return;
+
+            base.FeedbackMousePositionChange(position, isSelfFeedback);
+
+            window.UpdateCursorPosition(position);
+        }
+
         protected override void HandleMouseMoveRelative(Vector2 delta)
         {
             // handled via custom logic below.

@@ -6,7 +6,9 @@ using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using osu.Framework.Platform.Windows.Native;
+using osuTK;
 using SDL2;
+using Icon = osu.Framework.Platform.Windows.Native.Icon;
 
 namespace osu.Framework.Platform.Windows
 {
@@ -33,6 +35,32 @@ namespace osu.Framework.Platform.Windows
             {
                 // API doesn't exist on Windows 7 so it needs to be allowed to fail silently.
             }
+
+            Update += updateHostCursorPosition;
+        }
+
+        private Vector2? lastCursorPosition;
+
+        public void UpdateCursorPosition(Vector2 position) => lastCursorPosition = position;
+
+        /// <summary>
+        /// Transfers the last reported mouse cursor position to OS cursor.
+        /// </summary>
+        /// <remarks>
+        /// Updates the position of the OS cursor in cases where it may desync from the framework cursor,
+        /// such as when using relative mode.
+        /// </remarks>
+        private void updateHostCursorPosition()
+        {
+            if (lastCursorPosition == null || !IsActive.Value || !CursorInWindow.Value || !RelativeMouseMode)
+                return;
+
+            Point point = PointToScreen(new Point((int)(lastCursorPosition.Value.X / Scale), (int)(lastCursorPosition.Value.Y / Scale)));
+
+            // global warp to override any internal SDL handling.
+            ScheduleCommand(() => SDL.SDL_WarpMouseGlobal(point.X, point.Y));
+
+            lastCursorPosition = null;
         }
 
         public void UpdateMouseRelativeSpeedScale(double scale) => ScheduleCommand(() =>
