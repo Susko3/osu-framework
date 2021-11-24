@@ -1046,6 +1046,9 @@ namespace osu.Framework.Platform
 
                     SDL.SDL_SetWindowDisplayMode(SDLWindowHandle, ref closestMode);
                     SDL.SDL_SetWindowFullscreen(SDLWindowHandle, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN);
+
+                    // make the window size match so that alt-tabbing away warps the cursor to the expected position.
+                    SDL.SDL_SetWindowSize(SDLWindowHandle, closestMode.w, closestMode.h);
                     break;
 
                 case WindowState.FullscreenBorderless:
