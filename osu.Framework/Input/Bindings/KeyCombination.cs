@@ -27,8 +27,6 @@ namespace osu.Framework.Input.Bindings
 
         private static readonly ImmutableArray<InputKey> none = ImmutableArray.Create(InputKey.None);
 
-        private static readonly EqualityComparer<InputKey> comparer = new InputKeyComparer();
-
         /// <summary>
         /// Construct a new instance.
         /// </summary>
@@ -50,12 +48,22 @@ namespace osu.Framework.Input.Bindings
         }
 
         /// <summary>
+        /// Construct a new instance.
+        /// </summary>
+        /// <param name="keys">The keys.</param>
+        /// <remarks>This constructor is not optimized. Hot paths are assumed to use <see cref="FromInputState(InputState, Vector2?)"/>.</remarks>
+        public KeyCombination(params InputKeyWrapper[] keys)
+            : this(keys.Select(w => w.Key))
+        {
+        }
+
+        /// <summary>
         /// Construct a new instance from string representation provided by <see cref="ToString"/>.
         /// </summary>
         /// <param name="keys">A comma-separated (KeyCode in integer) string representation of the keys.</param>
         /// <remarks>This constructor is not optimized. Hot paths are assumed to use <see cref="FromInputState(InputState, Vector2?)"/>.</remarks>
         public KeyCombination(string keys)
-            : this(keys.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => (InputKey)int.Parse(s)))
+            : this(keys.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => (InputKey)int.Parse(s))) // TODO: don't separate on normal comma
         {
         }
 

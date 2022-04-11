@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using osu.Framework.Input.States;
+using osuTK.Input;
 
 namespace osu.Framework.Input.StateChanges
 {
@@ -15,6 +16,11 @@ namespace osu.Framework.Input.StateChanges
 
         public KeyboardKeyInput(KeyboardKey button, bool isPressed)
             : base(button, isPressed)
+        {
+        }
+
+        public KeyboardKeyInput(Key key, bool isPressed)
+            : base(KeyboardKey.ForInputFromKey(key), isPressed)
         {
         }
 

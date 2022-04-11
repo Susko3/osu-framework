@@ -1,10 +1,35 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using osu.Framework.Utils;
 
 namespace osu.Framework.Input.Bindings
 {
+    public readonly struct InputKeyWrapper
+    {
+        public readonly InputKey Key;
+        // public readonly char Character;
+
+        public InputKeyWrapper(InputKey key)
+        {
+            Key = key;
+            // Character = character;
+        }
+
+        public InputKeyWrapper(char c)
+        {
+            Key = KeyCombination.WithChar(c);
+        }
+
+        public static implicit operator InputKey(InputKeyWrapper wrapper) => wrapper.Key;
+
+        public static implicit operator InputKeyWrapper(InputKey key) => new InputKeyWrapper(key);
+        public static implicit operator InputKeyWrapper(char c) => new InputKeyWrapper(c);
+    }
+
     /// <summary>
     /// A collection of keys, mouse and other controllers' buttons.
     /// </summary>
@@ -30,7 +55,7 @@ namespace osu.Framework.Input.Bindings
 
         /// <summary>
         /// The alt key.
-        /// </summary>
+        /// </summary>![](../../../../../../AppData/Local/Temp/4zaibqlw.bmp)
         [Order(2)]
         Alt = 5,
 

@@ -32,6 +32,14 @@ namespace osu.Framework.Extensions
             outKey = key & (InputKey)(~char_mask);
         }
 
+        /// <summary>
+        /// Gets a default character assiciated with this <see cref="Key"/>.
+        /// </summary>
+        /// <remarks>
+        /// This corresponds to which character this key would produce on a en-us keyboard layout.
+        /// </remarks>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public static char GetCharacter(this Key key)
         {
             static bool inBetween(Key key, Key first, Key last, char firstCharacter, out char result)
