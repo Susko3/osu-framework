@@ -12,21 +12,21 @@ namespace osu.Framework.Input.States
         /// <summary>
         /// Whether left or right control key is pressed.
         /// </summary>
-        public bool ControlPressed => Keys.IsPressed(new KeyboardKey(Key.LControl)) || Keys.IsPressed(new KeyboardKey(Key.RControl));
+        public bool ControlPressed => Keys.IsPressed(Key.LControl) || Keys.IsPressed(Key.RControl);
 
         /// <summary>
         /// Whether left or right alt key is pressed.
         /// </summary>
-        public bool AltPressed => Keys.IsPressed(new KeyboardKey(Key.LAlt)) || Keys.IsPressed(new KeyboardKey(Key.RAlt));
+        public bool AltPressed => Keys.IsPressed(Key.LAlt) || Keys.IsPressed(Key.RAlt);
 
         /// <summary>
         /// Whether left or right shift key is pressed.
         /// </summary>
-        public bool ShiftPressed => Keys.IsPressed(new KeyboardKey(Key.LShift)) || Keys.IsPressed(new KeyboardKey(Key.RShift));
+        public bool ShiftPressed => Keys.IsPressed(Key.LShift) || Keys.IsPressed(Key.RShift);
 
         /// <summary>
         /// Whether left or right super key (Win key on Windows, or Command key on Mac) is pressed.
         /// </summary>
-        public bool SuperPressed => Keys.IsPressed(new KeyboardKey(Key.LWin)) || Keys.IsPressed(new KeyboardKey(Key.RWin));
+        public bool SuperPressed => Keys.IsPressed(Key.LWin) || Keys.IsPressed(Key.RWin);
     }
 }

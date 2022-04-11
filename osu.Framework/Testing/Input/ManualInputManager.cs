@@ -115,10 +115,10 @@ namespace osu.Framework.Testing.Input
             var binding = Host.PlatformKeyBindings.First(b => (PlatformAction)b.Action == action);
 
             foreach (var k in binding.KeyCombination.Keys)
-                PressKey(new KeyboardKey(k));
+                PressKey((Key)k);
 
             foreach (var k in binding.KeyCombination.Keys)
-                ReleaseKey(new KeyboardKey(k));
+                ReleaseKey((Key)k);
         }
 
         public void ScrollBy(Vector2 delta, bool isPrecise = false) => Input(new MouseScrollRelativeInput { Delta = delta, IsPrecise = isPrecise });
