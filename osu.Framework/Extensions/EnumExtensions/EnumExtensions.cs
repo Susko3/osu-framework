@@ -47,7 +47,16 @@ namespace osu.Framework.Extensions.EnumExtensions
                     return attr.Order;
 
                 if (orderedAttr.AllowPartialOrdering)
-                    return Convert.ToInt32(i);
+                {
+                    try
+                    {
+                        return Convert.ToInt32(i);
+                    }
+                    catch(OverflowException)
+                    {
+                        return Convert.ToInt64(i);
+                    }
+                }
 
                 throw new ArgumentException($"Not all values of {typeof(T)} have {nameof(OrderAttribute)} specified.");
             });

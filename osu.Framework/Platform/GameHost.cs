@@ -1143,6 +1143,8 @@ namespace osu.Framework.Platform
             new KeyBinding(new KeyCombination(InputKey.Control, InputKey.C), PlatformAction.Copy),
             new KeyBinding(new KeyCombination(InputKey.Control, InputKey.V), PlatformAction.Paste),
             new KeyBinding(new KeyCombination(InputKey.Control, InputKey.A), PlatformAction.SelectAll),
+            new KeyBinding(new KeyCombination(InputKey.Control, KeyCombination.WithChar('o')), PlatformAction.SelectAll),
+            new KeyBinding(new KeyCombination(InputKey.Control, KeyCombination.WithChar('z')), PlatformAction.SelectAll),
             new KeyBinding(InputKey.Left, PlatformAction.MoveBackwardChar),
             new KeyBinding(InputKey.Right, PlatformAction.MoveForwardChar),
             new KeyBinding(InputKey.BackSpace, PlatformAction.DeleteBackwardChar),

@@ -992,9 +992,19 @@ namespace osu.Framework.Graphics.UserInterface
             if (ImeCompositionActive)
                 return true;
 
-            if (e.Key.Character == 'z')
+            switch (e.Key.Character)
             {
-                Logger.Log("THAT?S SO COOL");
+                case 'z':
+                    Logger.Log("z");
+                    break;
+
+                case 'y':
+                    Logger.Log("y");
+                    break;
+
+                case 'o':
+                    Logger.Log("o");
+                    break;
             }
 
             switch (e.Key.Key)

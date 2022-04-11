@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Input.Bindings;
 
@@ -64,8 +65,20 @@ namespace osu.Framework.Input
             }).Where(s => !string.IsNullOrEmpty(s)));
         }
 
+        /// <summary>
+        /// See <see cref="KeyboardKey.ToString"/>
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         protected virtual string GetReadableKey(InputKey key)
         {
+            key.Decode(out key, out char c);
+
+            if (c != '\0')
+            {
+                return $"({GetReadableKey(key)}, '{c.ToString()}')";
+            }
+
             if (key >= InputKey.FirstTabletAuxiliaryButton)
                 return $"Tablet Aux {key - InputKey.FirstTabletAuxiliaryButton + 1}";
             if (key >= InputKey.FirstTabletPenButton)

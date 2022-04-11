@@ -5,7 +5,6 @@ using System;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Input.Bindings;
-using osuTK.Graphics.OpenGL;
 using osuTK.Input;
 
 namespace osu.Framework.Input
@@ -89,7 +88,7 @@ namespace osu.Framework.Input
         /// Indicates whether the <see cref="Key"/> of this touch is equal to <see cref="Key"/> of the other touch.
         /// </summary>
         /// <param name="other">The other touch.</param>
-        public bool Equals(KeyboardKey other) => Key == other.Key;
+        public bool Equals(KeyboardKey other) => Key == other.Key && Character == other.Character;
 
         public bool Equals(Key other) => Key == other;
 

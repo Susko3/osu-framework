@@ -1,12 +1,37 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
+using osu.Framework.Input.Bindings;
 using osuTK.Input;
 
 namespace osu.Framework.Extensions
 {
     public static class InputExtensions
     {
+        private static readonly EqualityComparer<InputKey> comparer = new InputKeyComparer();
+
+        public static bool ContainsKey(this IEnumerable<InputKey> source, InputKey value) => source.Contains(value, comparer);
+
+        public static InputKey Encode(this InputKey key, char c)
+        {
+            // use the upper 16 bits to encode the char
+
+            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+            key |= (InputKey)((ulong)c << 48);
+            return key;
+        }
+
+        public static void Decode(this InputKey key, out InputKey outKey, out char c)
+        {
+            const ulong char_mask = 0xFFFF000000000000;
+            c = (char)(((ulong)key & char_mask) >> 48);
+
+            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+            outKey = key & (InputKey)(~char_mask);
+        }
+
         public static char GetCharacter(this Key key)
         {
             static bool inBetween(Key key, Key first, Key last, char firstCharacter, out char result)

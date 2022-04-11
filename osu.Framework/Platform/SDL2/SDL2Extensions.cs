@@ -479,6 +479,7 @@ namespace osu.Framework.Platform.SDL2
             if (keycode <= SDL.SDL_Keycode.SDLK_z)
             {
                 // keycode represents an ascii character (always lower-case).
+                // Logger.Log($"name from keycode ascii!!! {(char)keycode}");
                 return (char)keycode;
             }
 
@@ -497,6 +498,7 @@ namespace osu.Framework.Platform.SDL2
 
                     case 1:
                         // we have one basic multilingual plane (Unicode BMP) character we can easily handle.
+                        // Logger.Log($"got name from sdl key name: {name}");
                         return name[0];
 
                     case 2:
