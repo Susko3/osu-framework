@@ -573,6 +573,8 @@ namespace osu.Framework.Input.Bindings
 
         public static InputKey FromKey(KeyboardKey key)
         {
+            // use the u
+
             return key.Key.ToInputKey(); // TODO: translate char!!
         }
 
@@ -581,19 +583,19 @@ namespace osu.Framework.Input.Bindings
         public static InputKey FromJoystickButton(JoystickButton button)
         {
             if (button >= JoystickButton.FirstHatRight)
-                return InputKey.FirstJoystickHatRightButton + (button - JoystickButton.FirstHatRight);
+                return InputKey.FirstJoystickHatRightButton + (ulong)(button - JoystickButton.FirstHatRight);
             if (button >= JoystickButton.FirstHatLeft)
-                return InputKey.FirstJoystickHatLeftButton + (button - JoystickButton.FirstHatLeft);
+                return InputKey.FirstJoystickHatLeftButton + (ulong)(button - JoystickButton.FirstHatLeft);
             if (button >= JoystickButton.FirstHatDown)
-                return InputKey.FirstJoystickHatDownButton + (button - JoystickButton.FirstHatDown);
+                return InputKey.FirstJoystickHatDownButton + (ulong)(button - JoystickButton.FirstHatDown);
             if (button >= JoystickButton.FirstHatUp)
-                return InputKey.FirstJoystickHatUpButton + (button - JoystickButton.FirstHatUp);
+                return InputKey.FirstJoystickHatUpButton + (ulong)(button - JoystickButton.FirstHatUp);
             if (button >= JoystickButton.FirstAxisPositive)
-                return InputKey.FirstJoystickAxisPositiveButton + (button - JoystickButton.FirstAxisPositive);
+                return InputKey.FirstJoystickAxisPositiveButton + (ulong)(button - JoystickButton.FirstAxisPositive);
             if (button >= JoystickButton.FirstAxisNegative)
-                return InputKey.FirstJoystickAxisNegativeButton + (button - JoystickButton.FirstAxisNegative);
+                return InputKey.FirstJoystickAxisNegativeButton + (ulong)(button - JoystickButton.FirstAxisNegative);
 
-            return InputKey.FirstJoystickButton + (button - JoystickButton.FirstButton);
+            return InputKey.FirstJoystickButton + (ulong)(button - JoystickButton.FirstButton);
         }
 
         public static IEnumerable<InputKey> FromScrollDelta(Vector2 scrollDelta)

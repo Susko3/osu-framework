@@ -9,7 +9,7 @@ namespace osu.Framework.Input.Bindings
     /// A collection of keys, mouse and other controllers' buttons.
     /// </summary>
     [HasOrderedElements(AllowPartialOrdering = true)]
-    public enum InputKey
+    public enum InputKey : ulong
     {
         /// <summary>
         /// No key pressed.

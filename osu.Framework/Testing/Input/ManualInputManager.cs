@@ -76,10 +76,10 @@ namespace osu.Framework.Testing.Input
         }
 
         /// <summary>
-        /// Press a key down. Release with <see cref="ReleaseKey"/>.
+        /// Press a key down. Release with <see cref="ReleaseKey(osu.Framework.Input.KeyboardKey)"/>.
         /// </summary>
         /// <remarks>
-        /// To press and release a key immediately, use <see cref="Key"/>.
+        /// To press and release a key immediately, use <see cref="Key(osu.Framework.Input.KeyboardKey)"/>.
         /// </remarks>
         /// <param name="key">The key to press.</param>
         public void PressKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, true));

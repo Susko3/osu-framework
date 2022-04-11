@@ -37,11 +37,11 @@ namespace osu.Framework.Input
         // }
         //
 
-        /// <summary>
-        /// Converts an <see cref="osuTK"/> <see cref="Key"/> to <see cref="KeyboardKey"/>.
-        /// </summary>
-        /// <param name="tkKey"></param>
-        /// <returns></returns>
+        // /// <summary>
+        // /// Converts an <see cref="osuTK"/> <see cref="Key"/> to <see cref="KeyboardKey"/>.
+        // /// </summary>
+        // /// <param name="tkKey"></param>
+        // /// <returns></returns>
         // public static implicit operator KeyboardKey(Key tkKey) => new KeyboardKey(tkKey);
 
         // public static implicit operator KeyboardKey(char character) => new KeyboardKey(character);
