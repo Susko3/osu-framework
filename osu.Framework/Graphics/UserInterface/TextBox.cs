@@ -18,6 +18,7 @@ using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
 using osuTK;
@@ -991,7 +992,12 @@ namespace osu.Framework.Graphics.UserInterface
             if (ImeCompositionActive)
                 return true;
 
-            switch (e.Key)
+            if (e.Key.Character == 'z')
+            {
+                Logger.Log("THAT?S SO COOL");
+            }
+
+            switch (e.Key.Key)
             {
                 case Key.Escape:
                     // if keypress is repeating, the IME was probably closed with the first, non-repeating keypress

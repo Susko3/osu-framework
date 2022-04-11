@@ -51,7 +51,7 @@ namespace osu.Framework.Input
         protected abstract ImmutableArray<InputHandler> InputHandlers { get; }
 
         private double keyboardRepeatTime;
-        private Key? keyboardRepeatKey;
+        private KeyboardKey? keyboardRepeatKey;
 
         /// <summary>
         /// The initial input state. <see cref="CurrentState"/> is always equal (as a reference) to the value returned from this.
@@ -131,7 +131,7 @@ namespace osu.Framework.Input
         public SlimReadOnlyListWrapper<Drawable> NonPositionalInputQueue => buildNonPositionalInputQueue();
 
         private readonly Dictionary<MouseButton, MouseButtonEventManager> mouseButtonEventManagers = new Dictionary<MouseButton, MouseButtonEventManager>();
-        private readonly Dictionary<Key, KeyEventManager> keyButtonEventManagers = new Dictionary<Key, KeyEventManager>();
+        private readonly Dictionary<KeyboardKey, KeyEventManager> keyButtonEventManagers = new Dictionary<KeyboardKey, KeyEventManager>();
         private readonly Dictionary<TouchSource, TouchEventManager> touchEventManagers = new Dictionary<TouchSource, TouchEventManager>();
         private readonly Dictionary<TabletPenButton, TabletPenButtonEventManager> tabletPenButtonEventManagers = new Dictionary<TabletPenButton, TabletPenButtonEventManager>();
         private readonly Dictionary<TabletAuxiliaryButton, TabletAuxiliaryButtonEventManager> tabletAuxiliaryButtonEventManagers = new Dictionary<TabletAuxiliaryButton, TabletAuxiliaryButtonEventManager>();
@@ -199,14 +199,14 @@ namespace osu.Framework.Input
         /// </summary>
         /// <param name="key">The key to be handled by the returned manager.</param>
         /// <returns>The <see cref="KeyEventManager"/>.</returns>
-        protected virtual KeyEventManager CreateButtonEventManagerFor(Key key) => new KeyEventManager(key);
+        protected virtual KeyEventManager CreateButtonEventManagerFor(KeyboardKey key) => new KeyEventManager(key);
 
         /// <summary>
         /// Get the <see cref="KeyEventManager"/> responsible for a specified key.
         /// </summary>
         /// <param name="key">The key to find the manager for.</param>
         /// <returns>The <see cref="KeyEventManager"/>.</returns>
-        public KeyEventManager GetButtonEventManagerFor(Key key)
+        public KeyEventManager GetButtonEventManagerFor(KeyboardKey key)
         {
             if (keyButtonEventManagers.TryGetValue(key, out var existing))
                 return existing;
@@ -483,7 +483,7 @@ namespace osu.Framework.Input
 
         private void updateKeyRepeat(InputState state)
         {
-            if (!(keyboardRepeatKey is Key key)) return;
+            if (!(keyboardRepeatKey is KeyboardKey key)) return;
 
             keyboardRepeatTime -= Time.Elapsed;
 
@@ -673,7 +673,7 @@ namespace osu.Framework.Input
                               || k == Key.LShift || k == Key.RShift
                               || k == Key.LWin || k == Key.RWin;
 
-        protected virtual void HandleKeyboardKeyStateChange(ButtonStateChangeEvent<Key> keyboardKeyStateChange)
+        protected virtual void HandleKeyboardKeyStateChange(ButtonStateChangeEvent<KeyboardKey> keyboardKeyStateChange)
         {
             var state = keyboardKeyStateChange.State;
             var key = keyboardKeyStateChange.Button;
@@ -683,7 +683,7 @@ namespace osu.Framework.Input
 
             if (kind == ButtonStateChangeKind.Pressed)
             {
-                if (!isModifierKey(key))
+                if (!isModifierKey(key.Key))
                 {
                     keyboardRepeatKey = key;
                     keyboardRepeatTime = repeat_initial_delay;
@@ -778,7 +778,11 @@ namespace osu.Framework.Input
                     HandleMouseButtonStateChange(mouseButtonStateChange);
                     return;
 
-                case ButtonStateChangeEvent<Key> keyboardKeyStateChange:
+                // case ButtonStateChangeEvent<Key> keyboardKeyStateChange:
+                //     HandleKeyboardKeyStateChange(keyboardKeyStateChange);
+                //     return;
+
+                case ButtonStateChangeEvent<KeyboardKey> keyboardKeyStateChange:
                     HandleKeyboardKeyStateChange(keyboardKeyStateChange);
                     return;
 

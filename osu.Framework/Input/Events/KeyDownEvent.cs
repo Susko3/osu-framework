@@ -14,7 +14,7 @@ namespace osu.Framework.Input.Events
     {
         public readonly bool Repeat;
 
-        public KeyDownEvent(InputState state, Key key, bool repeat = false)
+        public KeyDownEvent(InputState state, KeyboardKey key, bool repeat = false)
             : base(state, key)
         {
             Repeat = repeat;

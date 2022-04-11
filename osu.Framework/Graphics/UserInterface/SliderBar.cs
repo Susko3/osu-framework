@@ -166,7 +166,7 @@ namespace osu.Framework.Graphics.UserInterface
             float step = KeyboardStep != 0 ? KeyboardStep : (Convert.ToSingle(currentNumberInstantaneous.MaxValue) - Convert.ToSingle(currentNumberInstantaneous.MinValue)) / 20;
             if (currentNumberInstantaneous.IsInteger) step = MathF.Ceiling(step);
 
-            switch (e.Key)
+            switch (e.Key.Key)
             {
                 case Key.Right:
                     currentNumberInstantaneous.Add(step);

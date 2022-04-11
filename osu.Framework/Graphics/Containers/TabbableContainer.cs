@@ -38,6 +38,8 @@ namespace osu.Framework.Graphics.Containers
 
         protected override bool OnKeyDown(KeyDownEvent e)
         {
+            bool res = e.Key == Key.Tab;
+
             if (TabbableContentContainer == null || e.Key != Key.Tab)
                 return false;
 

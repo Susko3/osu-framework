@@ -320,7 +320,7 @@ namespace osu.Framework.Testing
         {
             if (!e.Repeat)
             {
-                switch (e.Key)
+                switch (e.Key.Key)
                 {
                     case Key.Escape:
                         exit?.Invoke();

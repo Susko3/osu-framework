@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Input.States;
 using osuTK;
@@ -570,28 +571,9 @@ namespace osu.Framework.Input.Bindings
             }
         }
 
-        public static InputKey FromKey(Key key)
+        public static InputKey FromKey(KeyboardKey key)
         {
-            switch (key)
-            {
-                case Key.LShift: return InputKey.LShift;
-
-                case Key.RShift: return InputKey.RShift;
-
-                case Key.LControl: return InputKey.LControl;
-
-                case Key.RControl: return InputKey.RControl;
-
-                case Key.LAlt: return InputKey.LAlt;
-
-                case Key.RAlt: return InputKey.RAlt;
-
-                case Key.LWin: return InputKey.LSuper;
-
-                case Key.RWin: return InputKey.RSuper;
-            }
-
-            return (InputKey)key;
+            return key.Key.ToInputKey(); // TODO: translate char!!
         }
 
         public static InputKey FromMouseButton(MouseButton button) => (InputKey)((int)InputKey.FirstMouseButton + button);

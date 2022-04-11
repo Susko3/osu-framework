@@ -1,7 +1,9 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Input.Bindings;
 using osu.Framework.Platform;
+using osuTK.Input;
 using TKVector2 = osuTK.Vector2;
 using SNVector2 = System.Numerics.Vector2;
 using SDPoint = System.Drawing.Point;
@@ -73,6 +75,31 @@ namespace osu.Framework.Extensions
             }
 
             return WindowState.Normal;
+        }
+
+        public static InputKey ToInputKey(this Key key)
+        {
+            switch (key)
+            {
+                case Key.LShift: return InputKey.LShift;
+
+                case Key.RShift: return InputKey.RShift;
+
+                case Key.LControl: return InputKey.LControl;
+
+                case Key.RControl: return InputKey.RControl;
+
+                case Key.LAlt: return InputKey.LAlt;
+
+                case Key.RAlt: return InputKey.RAlt;
+
+                case Key.LWin: return InputKey.LSuper;
+
+                case Key.RWin: return InputKey.RSuper;
+            }
+
+            // other then the above, keyboard keys are a one-to-one mapping from Key to InputKey.
+            return (InputKey)key;
         }
     }
 }

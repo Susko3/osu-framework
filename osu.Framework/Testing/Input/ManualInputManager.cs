@@ -88,7 +88,7 @@ namespace osu.Framework.Testing.Input
         /// Release a pressed key.
         /// </summary>
         /// <param name="key">The key to release.</param>
-        public void ReleaseKey(Key key) => Input(new KeyboardKeyInput(key, false));
+        public void ReleaseKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, false));
 
         /// <summary>
         /// Press and release the specified key.

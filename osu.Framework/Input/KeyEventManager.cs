@@ -6,16 +6,15 @@ using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.States;
-using osuTK.Input;
 
 namespace osu.Framework.Input
 {
     /// <summary>
     /// Manages state events for a single key.
     /// </summary>
-    public class KeyEventManager : ButtonEventManager<Key>
+    public class KeyEventManager : ButtonEventManager<KeyboardKey>
     {
-        public KeyEventManager(Key key)
+        public KeyEventManager(KeyboardKey key)
             : base(key)
         {
         }

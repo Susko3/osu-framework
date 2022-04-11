@@ -26,7 +26,7 @@ namespace osu.Framework.Tests.Visual.Input
         private TestInputManager testInputManager;
         private InputState state;
         private ButtonStates<MouseButton> mouse;
-        private ButtonStates<Key> keyboard;
+        private ButtonStates<KeyboardKey> keyboard;
         private ButtonStates<JoystickButton> joystick;
 
         private void addTestInputManagerStep()

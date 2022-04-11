@@ -7,7 +7,7 @@ namespace osu.Framework.Input.States
 {
     public class KeyboardState
     {
-        public readonly ButtonStates<Key> Keys = new ButtonStates<Key>();
+        public readonly ButtonStates<KeyboardKey> Keys = new ButtonStates<KeyboardKey>();
 
         /// <summary>
         /// Whether left or right control key is pressed.

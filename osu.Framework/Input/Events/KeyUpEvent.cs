@@ -11,7 +11,7 @@ namespace osu.Framework.Input.Events
     /// </summary>
     public class KeyUpEvent : KeyboardEvent
     {
-        public KeyUpEvent(InputState state, Key key)
+        public KeyUpEvent(InputState state, KeyboardKey key)
             : base(state, key)
         {
         }

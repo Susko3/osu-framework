@@ -537,7 +537,7 @@ namespace osu.Framework.Graphics.UserInterface
                 var currentPreselected = PreselectedItem;
                 int targetPreselectionIndex = drawableMenuItemsList.IndexOf(currentPreselected);
 
-                switch (e.Key)
+                switch (e.Key.Key)
                 {
                     case Key.Up:
                         PreselectItem(targetPreselectionIndex - 1);

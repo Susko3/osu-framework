@@ -815,6 +815,11 @@ namespace osu.Framework.Input.Bindings
         TrackNext,
 
         /// <summary>
+        /// Represents any keyboard key, to be used with TODO.
+        /// </summary>
+        Any,
+
+        /// <summary>
         /// The left shift key.
         /// </summary>
         [Order(3)]
