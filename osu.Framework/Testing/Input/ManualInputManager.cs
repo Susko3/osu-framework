@@ -82,7 +82,9 @@ namespace osu.Framework.Testing.Input
         /// To press and release a key immediately, use <see cref="Key"/>.
         /// </remarks>
         /// <param name="key">The key to press.</param>
-        public void PressKey(Key key) => Input(new KeyboardKeyInput(key, true));
+        public void PressKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, true));
+
+        public void PressKey(Key key) => PressKey(new KeyboardKey(key));
 
         /// <summary>
         /// Release a pressed key.
@@ -90,15 +92,19 @@ namespace osu.Framework.Testing.Input
         /// <param name="key">The key to release.</param>
         public void ReleaseKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, false));
 
+        public void ReleaseKey(Key key) => ReleaseKey(new KeyboardKey(key));
+
         /// <summary>
         /// Press and release the specified key.
         /// </summary>
         /// <param name="key">The key to actuate.</param>
-        public void Key(Key key)
+        public void Key(KeyboardKey key)
         {
             PressKey(key);
             ReleaseKey(key);
         }
+
+        public void Key(Key key) => Key(new KeyboardKey(key));
 
         /// <summary>
         /// Press and release the keys in the specified <see cref="PlatformAction"/>.
@@ -109,10 +115,10 @@ namespace osu.Framework.Testing.Input
             var binding = Host.PlatformKeyBindings.First(b => (PlatformAction)b.Action == action);
 
             foreach (var k in binding.KeyCombination.Keys)
-                PressKey((Key)k);
+                PressKey(new KeyboardKey(k));
 
             foreach (var k in binding.KeyCombination.Keys)
-                ReleaseKey((Key)k);
+                ReleaseKey(new KeyboardKey(k));
         }
 
         public void ScrollBy(Vector2 delta, bool isPrecise = false) => Input(new MouseScrollRelativeInput { Delta = delta, IsPrecise = isPrecise });

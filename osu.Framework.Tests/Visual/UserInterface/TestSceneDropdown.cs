@@ -161,11 +161,13 @@ namespace osu.Framework.Tests.Visual.UserInterface
             AddAssert("current value should be two", () => bindableDropdown.Current.Value.Identifier == "two");
         }
 
-        private void performKeypress(Drawable drawable, Key key)
+        private void performKeypress(Drawable drawable, KeyboardKey key)
         {
             drawable.TriggerEvent(new KeyDownEvent(new InputState(), key));
             drawable.TriggerEvent(new KeyUpEvent(new InputState(), key));
         }
+
+        private void performKeypress(Drawable drawable, Key key) => performKeypress(drawable, new KeyboardKey(key));
 
         private void performPlatformAction(PlatformAction action, PlatformActionContainer platformActionContainer, Drawable drawable)
         {

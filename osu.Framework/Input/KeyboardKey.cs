@@ -4,6 +4,8 @@
 using System;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.TypeExtensions;
+using osu.Framework.Input.Bindings;
+using osuTK.Graphics.OpenGL;
 using osuTK.Input;
 
 namespace osu.Framework.Input
@@ -24,18 +26,29 @@ namespace osu.Framework.Input
         {
         }
 
+        public KeyboardKey(InputKey inputKey)
+            : this((Key)inputKey)
+        {
+        }
+
         // public KeyboardKey(char character)
         //     : this(Key.LastKey, character) // TODO use Key.Any
         // {
         // }
         //
 
-        public static implicit operator KeyboardKey(Key tkKey) => new KeyboardKey(tkKey);
+        /// <summary>
+        /// Converts an <see cref="osuTK"/> <see cref="Key"/> to <see cref="KeyboardKey"/>.
+        /// </summary>
+        /// <param name="tkKey"></param>
+        /// <returns></returns>
+        // public static implicit operator KeyboardKey(Key tkKey) => new KeyboardKey(tkKey);
 
         // public static implicit operator KeyboardKey(char character) => new KeyboardKey(character);
         //
         // public static implicit operator Key(KeyboardKey keyboardKey) => keyboardKey.Key;
 
+        // public static implicit operator KeyboardKey(InputKey inputKey) => new KeyboardKey((Key)inputKey);
         public override string ToString()
         {
             string charToString(char c)
