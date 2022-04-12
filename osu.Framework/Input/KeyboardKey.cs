@@ -54,29 +54,7 @@ namespace osu.Framework.Input
 
         public override string ToString()
         {
-            string charToString(char c)
-            {
-                switch (c)
-                {
-                    case '\a': return @"\a";
-
-                    case '\b': return @"\b";
-
-                    case '\f': return @"\f";
-
-                    case '\n': return @"\n";
-
-                    case '\r': return @"\r";
-
-                    case '\t': return @"\t";
-
-                    case '\v': return @"\v";
-
-                    default: return c.ToString();
-                }
-            }
-
-            string c = Character == '\0' ? null : $", '{charToString(Character)}'";
+            string c = Character == '\0' ? null : $", {Character.StringRepresentation()}";
             return $@"{GetType().ReadableName()}({Key}{c})";
         }
 
@@ -106,10 +84,10 @@ namespace osu.Framework.Input
         #region operators with osuTK Key
 
         // [Obsolete("Use new KeyboardKey(Key)")]
-        // public static implicit operator KeyboardKey(Key tkKey) => new KeyboardKey(tkKey);
+        public static implicit operator KeyboardKey(Key tkKey) => new KeyboardKey(tkKey);
 
         // [Obsolete("Use KeyboardKey.Key")]
-        public static implicit operator Key(KeyboardKey key) => key.Key;
+        // public static implicit operator Key(KeyboardKey key) => key.Key;
 
         // public bool Equals(Key other) => Key == other;
         // public static bool operator ==(KeyboardKey key, Key tkKey) => key.Equals(tkKey);

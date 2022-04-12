@@ -16,7 +16,7 @@ using osuTK.Input;
 namespace osu.Framework.Input.Bindings
 {
     /// <summary>
-    /// Represent a combination of more than one <see cref="InputKey"/>s.
+    /// Represent a combination one or more <see cref="InputKey"/>s.
     /// </summary>
     public readonly struct KeyCombination : IEquatable<KeyCombination>
     {

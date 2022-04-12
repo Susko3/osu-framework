@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -125,10 +124,10 @@ namespace osu.Framework.iOS
 
         public override IEnumerable<KeyBinding> PlatformKeyBindings => new[]
         {
-            new KeyBinding(new KeyCombination(InputKey.Super, InputKey.X), PlatformAction.Cut),
-            new KeyBinding(new KeyCombination(InputKey.Super, InputKey.C), PlatformAction.Copy),
-            new KeyBinding(new KeyCombination(InputKey.Super, InputKey.V), PlatformAction.Paste),
-            new KeyBinding(new KeyCombination(InputKey.Super, InputKey.A), PlatformAction.SelectAll),
+            new KeyBinding(new KeyCombination(InputKey.Super, 'x'), PlatformAction.Cut),
+            new KeyBinding(new KeyCombination(InputKey.Super, 'c'), PlatformAction.Copy),
+            new KeyBinding(new KeyCombination(InputKey.Super, 'v'), PlatformAction.Paste),
+            new KeyBinding(new KeyCombination(InputKey.Super, 'a'), PlatformAction.SelectAll),
             new KeyBinding(InputKey.Left, PlatformAction.MoveBackwardChar),
             new KeyBinding(InputKey.Right, PlatformAction.MoveForwardChar),
             new KeyBinding(InputKey.BackSpace, PlatformAction.DeleteBackwardChar),
@@ -154,6 +153,8 @@ namespace osu.Framework.iOS
             new KeyBinding(new KeyCombination(InputKey.Control, InputKey.Tab), PlatformAction.DocumentNext),
             new KeyBinding(new KeyCombination(InputKey.Control, InputKey.Shift, InputKey.Tab), PlatformAction.DocumentPrevious),
             new KeyBinding(new KeyCombination(InputKey.Delete), PlatformAction.Delete),
+
+            // TODO: this is super outdated. possible use static platform key binds for macOS and iOS.
         };
     }
 }

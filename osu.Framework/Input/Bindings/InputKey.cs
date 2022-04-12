@@ -1,30 +1,36 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
+using System;
+using osu.Framework.Extensions;
 using osu.Framework.Utils;
 
 namespace osu.Framework.Input.Bindings
 {
+    /// <summary>
+    /// A wrapper around <see cref="InputKey"/>, allowing implicit conversions from <see cref="InputKey"/> and <see cref="char"/>.
+    /// </summary>
     public readonly struct InputKeyWrapper
     {
         public readonly InputKey Key;
         // public readonly char Character;
 
-        public InputKeyWrapper(InputKey key)
+        private InputKeyWrapper(InputKey key)
         {
             Key = key;
             // Character = character;
         }
 
-        public InputKeyWrapper(char c)
+        private InputKeyWrapper(char c)
         {
-            Key = KeyCombination.WithChar(c);
-        }
+            string lower = c.ToString().ToLowerInvariant();
 
-        public static implicit operator InputKey(InputKeyWrapper wrapper) => wrapper.Key;
+            // hopefully the lowercase version of this character isn't a UTF-16 surrogate pair (two characters!).
+            if (lower.Length != 1)
+                throw new ArgumentException($"Invalid lowercase representation of character {c.StringRepresentation()}: \"{lower}\"");
+
+            Key = KeyCombination.WithChar(lower[0]);
+        }
 
         public static implicit operator InputKeyWrapper(InputKey key) => new InputKeyWrapper(key);
         public static implicit operator InputKeyWrapper(char c) => new InputKeyWrapper(c);
