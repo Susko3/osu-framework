@@ -14,7 +14,7 @@ namespace osu.Framework.Extensions
 
         public static bool ContainsKey(this IEnumerable<InputKey> source, InputKey value) => source.Contains(value, comparer);
 
-        public static InputKey Encode(this InputKey key, char c)
+        public static InputKey Encode(this InputKey key, char c) // TODO: probably move to KeyCombination
         {
             // use the upper 16 bits to encode the char
 

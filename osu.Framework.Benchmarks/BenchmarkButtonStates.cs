@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using BenchmarkDotNet.Attributes;
+using osu.Framework.Input;
 using osu.Framework.Input.States;
 using osuTK.Input;
 
@@ -35,14 +36,14 @@ namespace osu.Framework.Benchmarks
         [Benchmark]
         public int EnumerateBothDifferences(int count)
         {
-            var state1 = new ButtonStates<Key>();
-            var state2 = new ButtonStates<Key>();
+            var state1 = new ButtonStates<KeyboardKey>();
+            var state2 = new ButtonStates<KeyboardKey>();
 
             for (int i = 0; i < count; i++)
-                state1.SetPressed((Key)i, true);
+                state1.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
 
             for (int i = count; i < 2 * count; i++)
-                state2.SetPressed((Key)i, true);
+                state2.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
 
             return state1.EnumerateDifference(state2).Pressed.Length;
         }

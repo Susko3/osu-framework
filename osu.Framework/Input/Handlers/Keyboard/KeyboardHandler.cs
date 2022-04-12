@@ -2,12 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Input.StateChanges;
-using osu.Framework.Logging;
 using osu.Framework.Platform;
-using osu.Framework.Platform.SDL2;
 using osu.Framework.Statistics;
-using SDL2;
-using osuTK.Input;
 
 namespace osu.Framework.Input.Handlers.Keyboard
 {
@@ -48,26 +44,8 @@ namespace osu.Framework.Input.Handlers.Keyboard
             FrameStatistics.Increment(StatisticsCounterType.KeyEvents);
         }
 
-        private void handleKeyDown(SDL.SDL_Keysym sdlKeysym)
-        {
-            var key = sdlKeysym.ToKeyboardKey();
+        private void handleKeyDown(KeyboardKey key) => enqueueInput(new KeyboardKeyInput(key, true));
 
-            if (key.Key == Key.Unknown)
-                return;
-
-            Logger.Log($"keykey: {key}");
-
-            enqueueInput(new KeyboardKeyInput(key, true));
-        }
-
-        private void handleKeyUp(SDL.SDL_Keysym sdlKeysym)
-        {
-            var key = sdlKeysym.ToKeyboardKey();
-
-            if (key.Key == Key.Unknown)
-                return;
-
-            enqueueInput(new KeyboardKeyInput(key, false));
-        }
+        private void handleKeyUp(KeyboardKey key) => enqueueInput(new KeyboardKeyInput(key, false));
     }
 }

@@ -61,7 +61,7 @@ namespace osu.Framework.Input.Bindings
 
         /// <summary>
         /// The alt key.
-        /// </summary>![](../../../../../../AppData/Local/Temp/4zaibqlw.bmp)
+        /// </summary>
         [Order(2)]
         Alt = 5,
 

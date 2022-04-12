@@ -18,7 +18,6 @@ using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
-using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
 using osuTK;
@@ -991,21 +990,6 @@ namespace osu.Framework.Graphics.UserInterface
 
             if (ImeCompositionActive)
                 return true;
-
-            switch (e.Key.Character)
-            {
-                case 'z':
-                    Logger.Log("z");
-                    break;
-
-                case 'y':
-                    Logger.Log("y");
-                    break;
-
-                case 'o':
-                    Logger.Log("o");
-                    break;
-            }
 
             switch (e.Key.Key)
             {
