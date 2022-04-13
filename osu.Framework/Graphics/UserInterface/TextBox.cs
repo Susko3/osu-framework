@@ -991,7 +991,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (ImeCompositionActive)
                 return true;
 
-            switch (e.Key.Key)
+            switch (e.Key)
             {
                 case Key.Escape:
                     // if keypress is repeating, the IME was probably closed with the first, non-repeating keypress

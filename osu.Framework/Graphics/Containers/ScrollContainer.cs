@@ -257,7 +257,7 @@ namespace osu.Framework.Graphics.Containers
         {
             if (IsHandlingKeyboardScrolling && !IsDragging)
             {
-                switch (e.Key.Key)
+                switch (e.Key)
                 {
                     case Key.PageUp:
                         OnUserScroll(Target - DisplayableContent);

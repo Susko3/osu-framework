@@ -4,15 +4,20 @@
 using System.Collections.Generic;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Input.States;
+using osuTK.Input;
 
 namespace osu.Framework.Input.Events
 {
     /// <summary>
     /// Events of a keyboard key.
     /// </summary>
-    public abstract class KeyboardEvent : UIEvent
+    public abstract class KeyboardEvent : UIEvent, IKeyboardKey
     {
-        public readonly KeyboardKey Key;
+        public readonly KeyboardKey KeyboardKey;
+
+        public Key Key => KeyboardKey.Key;
+
+        public char Character => KeyboardKey.Character;
 
         /// <summary>
         /// Whether a specific key is pressed.
@@ -32,7 +37,7 @@ namespace osu.Framework.Input.Events
         protected KeyboardEvent(InputState state, KeyboardKey key)
             : base(state)
         {
-            Key = key;
+            KeyboardKey = key;
         }
 
         public override string ToString() => $"{GetType().ReadableName()}({Key})";

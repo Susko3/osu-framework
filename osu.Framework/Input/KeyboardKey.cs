@@ -19,27 +19,11 @@ namespace osu.Framework.Input
     ///     <item>Drawables checking if said keys match some desired action in <see cref="Drawable.OnKeyDown"/>.</item>
     /// </list>
     /// </summary>
-    public readonly struct KeyboardKey : IEquatable<KeyboardKey>
+    public readonly struct KeyboardKey : IKeyboardKey, IEquatable<KeyboardKey>
     {
-        /// <summary>
-        /// The key that was pressed (roughly equivalent to a scancode).
-        /// Independent of the system keyboard layout.
-        /// </summary>
-        /// <remarks>
-        /// Should be matched against when the location of a key on the keyboard is more important than the character printed on it.
-        /// </remarks>
-        public readonly Key Key;
+        public Key Key { get; }
 
-        /// <summary>
-        /// The character that this key would generate if entered (roughly equivalent to the keycode - the character printed on the key).
-        /// Dependant on the system keyboard layout.
-        /// </summary>
-        /// <remarks>
-        /// Should be matched against for common platform actions (eg. copy, paste) and actions that match mnemonically to the character (eg. 'o' for "open file").
-        /// Generally, only alphanumeric characters [a-z, 0-9] are safe to match against. Other characters are likely to be absent from international keyboard layouts,
-        /// or appear in a shifted / altgr state (something not currently provided by <see cref="KeyboardKey"/>)
-        /// </remarks>
-        public readonly char Character;
+        public char Character { get; }
 
         /// <summary>
         /// Whether this key is the result of input -- whether from an <see cref="InputHandler"/> or synthesized from a <see cref="ManualInputManager"/>.
@@ -138,5 +122,30 @@ namespace osu.Framework.Input
             => obj is KeyboardKey other && Equals(other);
 
         public override int GetHashCode() => HashCode.Combine((int)Key, Character);
+    }
+
+    public interface IKeyboardKey
+    {
+        /// <summary>
+        /// The key that was pressed (roughly equivalent to a scancode).
+        /// Independent of the system keyboard layout.
+        /// </summary>
+        /// <remarks>
+        /// Should be matched against when the location of a key on the keyboard is more important than the character printed on it.
+        /// Also see <see cref="Character"/>.
+        /// </remarks>
+        Key Key { get; }
+
+        /// <summary>
+        /// The character that this key would generate if entered (roughly equivalent to the keycode - the character printed on the key).
+        /// Dependant on the system keyboard layout.
+        /// </summary>
+        /// <remarks>
+        /// Should be matched against for common platform actions (eg. copy, paste) and actions that match mnemonically to the character (eg. 'o' for "open file").
+        /// Generally, only alphanumeric characters [a-z, 0-9] are safe to match against. Other characters are likely to be absent from international keyboard layouts,
+        /// or appear in a shifted / altgr state (something not currently provided by <see cref="IKeyboardKey"/>).
+        /// Also see <see cref="Key"/>.
+        /// </remarks>
+        char Character { get; }
     }
 }

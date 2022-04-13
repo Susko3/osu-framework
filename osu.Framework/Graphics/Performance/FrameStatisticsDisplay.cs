@@ -316,7 +316,7 @@ namespace osu.Framework.Graphics.Performance
 
         protected override bool OnKeyDown(KeyDownEvent e)
         {
-            switch (e.Key.Key)
+            switch (e.Key)
             {
                 case Key.ControlLeft:
                     Expanded = true;
@@ -332,7 +332,7 @@ namespace osu.Framework.Graphics.Performance
 
         protected override void OnKeyUp(KeyUpEvent e)
         {
-            switch (e.Key.Key)
+            switch (e.Key)
             {
                 case Key.ControlLeft:
                     Expanded = false;

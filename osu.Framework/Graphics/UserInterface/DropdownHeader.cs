@@ -111,7 +111,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (!Enabled.Value)
                 return true;
 
-            switch (e.Key.Key)
+            switch (e.Key)
             {
                 case Key.Up:
                     ChangeSelection?.Invoke(DropdownSelectionAction.Previous);
