@@ -40,10 +40,10 @@ namespace osu.Framework.Benchmarks
             var state2 = new ButtonStates<KeyboardKey>();
 
             for (int i = 0; i < count; i++)
-                state1.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
+                state1.SetPressed(KeyboardKey.From((Key)i), true);
 
             for (int i = count; i < 2 * count; i++)
-                state2.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
+                state2.SetPressed(KeyboardKey.From((Key)i), true);
 
             return state1.EnumerateDifference(state2).Pressed.Length;
         }

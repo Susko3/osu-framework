@@ -3,7 +3,6 @@
 
 using System;
 using System.Linq;
-using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Input.Bindings;
 
@@ -30,7 +29,7 @@ namespace osu.Framework.Input
         /// <returns>The <see cref="KeyCombination"/> as a human-readable string.</returns>
         public string GetReadableString(KeyCombination c)
         {
-            var sortedKeys = c.Keys.GetValuesInOrder().ToArray();
+            var sortedKeys = c.Keys.GetValuesInOrder().ToArray(); // TODO: this requires that Keys is an enum...
 
             return string.Join('-', sortedKeys.Select(key =>
             {
@@ -72,7 +71,7 @@ namespace osu.Framework.Input
         /// <returns></returns>
         protected virtual string GetReadableKey(InputKey key)
         {
-            key.Decode(out key, out char c);
+            InputKeyWrapper.Unmangle(key, out key, out char c);
 
             if (c != '\0')
             {

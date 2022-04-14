@@ -163,8 +163,9 @@ namespace osu.Framework.Tests.Visual.UserInterface
 
         private void performKeypress(Drawable drawable, Key key)
         {
-            drawable.TriggerEvent(new KeyDownEvent(new InputState(), key));
-            drawable.TriggerEvent(new KeyUpEvent(new InputState(), key));
+            var keyboardKey = KeyboardKey.From(key);
+            drawable.TriggerEvent(new KeyDownEvent(new InputState(), keyboardKey));
+            drawable.TriggerEvent(new KeyUpEvent(new InputState(), keyboardKey));
         }
 
         private void performPlatformAction(PlatformAction action, PlatformActionContainer platformActionContainer, Drawable drawable)

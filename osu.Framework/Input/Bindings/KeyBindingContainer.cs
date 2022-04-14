@@ -114,10 +114,10 @@ namespace osu.Framework.Input.Bindings
                     if (keyDown.Repeat)
                         return handleRepeat(state);
                     else
-                        return handleNewPressed(state, KeyCombination.FromKey(keyDown.Key));
+                        return handleNewPressed(state, KeyCombination.FromKey(keyDown.KeyboardKey));
 
                 case KeyUpEvent keyUp:
-                    handleNewReleased(state, KeyCombination.FromKey(keyUp.Key));
+                    handleNewReleased(state, KeyCombination.FromKey(keyUp.KeyboardKey));
                     return false;
 
                 case JoystickPressEvent joystickPress:

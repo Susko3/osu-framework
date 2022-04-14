@@ -778,10 +778,6 @@ namespace osu.Framework.Input
                     HandleMouseButtonStateChange(mouseButtonStateChange);
                     return;
 
-                // case ButtonStateChangeEvent<Key> keyboardKeyStateChange:
-                //     HandleKeyboardKeyStateChange(keyboardKeyStateChange);
-                //     return;
-
                 case ButtonStateChangeEvent<KeyboardKey> keyboardKeyStateChange:
                     HandleKeyboardKeyStateChange(keyboardKeyStateChange);
                     return;

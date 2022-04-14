@@ -10,27 +10,15 @@ namespace osu.Framework.Extensions
 {
     public static class InputExtensions
     {
+
+
+
         private static readonly EqualityComparer<InputKey> comparer = new InputKeyComparer();
 
         public static bool ContainsKey(this IEnumerable<InputKey> source, InputKey value) => source.Contains(value, comparer);
 
-        public static InputKey Encode(this InputKey key, char c) // TODO: probably move to KeyCombination
-        {
-            // use the upper 16 bits to encode the char
 
-            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-            key |= (InputKey)((ulong)c << 48);
-            return key;
-        }
 
-        public static void Decode(this InputKey key, out InputKey outKey, out char c)
-        {
-            const ulong char_mask = 0xFFFF000000000000;
-            c = (char)(((ulong)key & char_mask) >> 48);
-
-            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-            outKey = key & (InputKey)(~char_mask);
-        }
 
         /// <summary>
         /// Gets a default character assiciated with this <see cref="Key"/>.

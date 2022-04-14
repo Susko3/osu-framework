@@ -84,7 +84,7 @@ namespace osu.Framework.Testing.Input
         /// <param name="key">The key to press.</param>
         public void PressKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, true));
 
-        public void PressKey(Key key) => PressKey(new KeyboardKey(key));
+        public void PressKey(Key key) => PressKey(KeyboardKey.From(key));
 
         /// <summary>
         /// Release a pressed key.
@@ -92,7 +92,7 @@ namespace osu.Framework.Testing.Input
         /// <param name="key">The key to release.</param>
         public void ReleaseKey(KeyboardKey key) => Input(new KeyboardKeyInput(key, false));
 
-        public void ReleaseKey(Key key) => ReleaseKey(new KeyboardKey(key));
+        public void ReleaseKey(Key key) => ReleaseKey(KeyboardKey.From(key));
 
         /// <summary>
         /// Press and release the specified key.
@@ -104,7 +104,7 @@ namespace osu.Framework.Testing.Input
             ReleaseKey(key);
         }
 
-        public void Key(Key key) => Key(new KeyboardKey(key));
+        public void Key(Key key) => Key(KeyboardKey.From(key));
 
         /// <summary>
         /// Press and release the keys in the specified <see cref="PlatformAction"/>.

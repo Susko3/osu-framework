@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
-using osu.Framework.Extensions;
 
 namespace osu.Framework.Input.Bindings
 {
@@ -10,8 +9,8 @@ namespace osu.Framework.Input.Bindings
     {
         public override bool Equals(InputKey left, InputKey right)
         {
-            left.Decode(out var leftKey, out char leftChar);
-            right.Decode(out var rightKey, out char rightChar);
+            InputKeyWrapper.Unmangle(left, out var leftKey, out char leftChar);
+            InputKeyWrapper.Unmangle(right, out var rightKey, out char rightChar);
 
             if (leftKey == rightKey && leftKey != InputKey.Any) // two any keys shouldn't match here.
                 return true;

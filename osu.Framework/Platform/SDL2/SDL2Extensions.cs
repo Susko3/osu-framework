@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
@@ -16,6 +17,12 @@ namespace osu.Framework.Platform.SDL2
 {
     public static class SDL2Extensions
     {
+        /// <summary>
+        /// Whether this <paramref name="keycode"/> has the <see cref="SDL.SDLK_SCANCODE_MASK"/> bit set.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool HasScancodeMask(this SDL.SDL_Keycode keycode) => keycode.HasFlagFast((SDL.SDL_Keycode)SDL.SDLK_SCANCODE_MASK);
+
         public static Key ToKey(this SDL.SDL_Keysym sdlKeysym)
         {
             // Apple devices don't have the notion of NumLock (they have a Clear key instead).
@@ -481,7 +488,7 @@ namespace osu.Framework.Platform.SDL2
                 return (char)keycode;
             }
 
-            if (((int)keycode & SDL.SDLK_SCANCODE_MASK) == 0)
+            if (!keycode.HasFlagFast((SDL.SDL_Keycode)SDL.SDLK_SCANCODE_MASK))
             {
                 // this key is encoded as a UCS4 (UTF-32) unicode character.
                 // it's name is it's character.

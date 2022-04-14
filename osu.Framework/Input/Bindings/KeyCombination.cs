@@ -53,7 +53,7 @@ namespace osu.Framework.Input.Bindings
         /// <param name="keys">The keys.</param>
         /// <remarks>This constructor is not optimized. Hot paths are assumed to use <see cref="FromInputState(InputState, Vector2?)"/>.</remarks>
         public KeyCombination(params InputKeyWrapper[] keys)
-            : this(keys.Select(w => w.Key))
+            : this(keys.Select(w => w.InputKey))
         {
         }
 
@@ -63,7 +63,7 @@ namespace osu.Framework.Input.Bindings
         /// <param name="keys">A comma-separated (KeyCode in integer) string representation of the keys.</param>
         /// <remarks>This constructor is not optimized. Hot paths are assumed to use <see cref="FromInputState(InputState, Vector2?)"/>.</remarks>
         public KeyCombination(string keys)
-            : this(keys.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => (InputKey)int.Parse(s))) // TODO: don't separate on normal comma
+            : this(keys.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => (InputKey)int.Parse(s)))
         {
         }
 
@@ -581,31 +581,26 @@ namespace osu.Framework.Input.Bindings
             }
         }
 
-        public static InputKey WithChar(char c) => InputKey.Any.Encode(c);
-
-        public static InputKey FromKey(KeyboardKey key)
-        {
-            return key.Key.ToInputKey().Encode(key.Character);
-        }
+        public static InputKey FromKey(KeyboardKey key) => InputKeyWrapper.ToInputKey(key);
 
         public static InputKey FromMouseButton(MouseButton button) => (InputKey)((int)InputKey.FirstMouseButton + button);
 
         public static InputKey FromJoystickButton(JoystickButton button)
         {
             if (button >= JoystickButton.FirstHatRight)
-                return InputKey.FirstJoystickHatRightButton + (ulong)(button - JoystickButton.FirstHatRight);
+                return InputKey.FirstJoystickHatRightButton + (button - JoystickButton.FirstHatRight);
             if (button >= JoystickButton.FirstHatLeft)
-                return InputKey.FirstJoystickHatLeftButton + (ulong)(button - JoystickButton.FirstHatLeft);
+                return InputKey.FirstJoystickHatLeftButton + (button - JoystickButton.FirstHatLeft);
             if (button >= JoystickButton.FirstHatDown)
-                return InputKey.FirstJoystickHatDownButton + (ulong)(button - JoystickButton.FirstHatDown);
+                return InputKey.FirstJoystickHatDownButton + (button - JoystickButton.FirstHatDown);
             if (button >= JoystickButton.FirstHatUp)
-                return InputKey.FirstJoystickHatUpButton + (ulong)(button - JoystickButton.FirstHatUp);
+                return InputKey.FirstJoystickHatUpButton + (button - JoystickButton.FirstHatUp);
             if (button >= JoystickButton.FirstAxisPositive)
-                return InputKey.FirstJoystickAxisPositiveButton + (ulong)(button - JoystickButton.FirstAxisPositive);
+                return InputKey.FirstJoystickAxisPositiveButton + (button - JoystickButton.FirstAxisPositive);
             if (button >= JoystickButton.FirstAxisNegative)
-                return InputKey.FirstJoystickAxisNegativeButton + (ulong)(button - JoystickButton.FirstAxisNegative);
+                return InputKey.FirstJoystickAxisNegativeButton + (button - JoystickButton.FirstAxisNegative);
 
-            return InputKey.FirstJoystickButton + (ulong)(button - JoystickButton.FirstButton);
+            return InputKey.FirstJoystickButton + (button - JoystickButton.FirstButton);
         }
 
         public static IEnumerable<InputKey> FromScrollDelta(Vector2 scrollDelta)

@@ -25,10 +25,10 @@ namespace osu.Framework.Benchmarks
             var state2 = new ButtonStates<KeyboardKey>();
 
             for (int i = 0; i < count; i++)
-                state1.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
+                state1.SetPressed(KeyboardKey.From((Key)i), true);
 
             for (int i = count; i < 2 * count; i++)
-                state2.SetPressed(KeyboardKey.ForInputFromKey((Key)i), true);
+                state2.SetPressed(KeyboardKey.From((Key)i), true);
 
             return new KeyboardKeyInput(state1, state2);
         }
@@ -39,7 +39,7 @@ namespace osu.Framework.Benchmarks
             var entries = new List<ButtonInputEntry<KeyboardKey>>();
 
             for (int i = 0; i < 10; i++)
-                entries.Add(new ButtonInputEntry<KeyboardKey>(KeyboardKey.ForInputFromKey((Key)i), true));
+                entries.Add(new ButtonInputEntry<KeyboardKey>(KeyboardKey.From((Key)i), true));
 
             var input = new KeyboardKeyInput(entries);
             var state = new InputState();

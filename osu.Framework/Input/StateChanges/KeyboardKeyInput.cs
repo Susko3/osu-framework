@@ -20,7 +20,7 @@ namespace osu.Framework.Input.StateChanges
         }
 
         public KeyboardKeyInput(Key key, bool isPressed)
-            : base(KeyboardKey.ForInputFromKey(key), isPressed)
+            : base(KeyboardKey.From(key), isPressed)
         {
         }
 

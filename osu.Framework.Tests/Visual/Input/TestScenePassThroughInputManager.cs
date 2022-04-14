@@ -13,6 +13,7 @@ using osu.Framework.Testing;
 using osu.Framework.Testing.Input;
 using osuTK;
 using osuTK.Input;
+using KeyboardState = osu.Framework.Input.States.KeyboardState;
 
 namespace osu.Framework.Tests.Visual.Input
 {
@@ -26,7 +27,7 @@ namespace osu.Framework.Tests.Visual.Input
         private TestInputManager testInputManager;
         private InputState state;
         private ButtonStates<MouseButton> mouse;
-        private ButtonStates<KeyboardKey> keyboard;
+        private KeyboardState keyboard;
         private ButtonStates<JoystickButton> joystick;
 
         private void addTestInputManagerStep()
@@ -37,7 +38,7 @@ namespace osu.Framework.Tests.Visual.Input
                 Add(testInputManager);
                 state = testInputManager.CurrentState;
                 mouse = state.Mouse.Buttons;
-                keyboard = state.Keyboard.Keys;
+                keyboard = state.Keyboard;
                 joystick = state.Joystick.Buttons;
             });
         }
@@ -64,7 +65,7 @@ namespace osu.Framework.Tests.Visual.Input
                 InputManager.ReleaseKey(Key.A);
                 InputManager.ReleaseJoystickButton(JoystickButton.Button1);
             });
-            AddAssert("All released", () => !mouse.HasAnyButtonPressed && !keyboard.HasAnyButtonPressed && !joystick.HasAnyButtonPressed);
+            AddAssert("All released", () => !mouse.HasAnyButtonPressed && !keyboard.Keys.HasAnyButtonPressed && !joystick.HasAnyButtonPressed);
         }
 
         [Test]
@@ -100,7 +101,7 @@ namespace osu.Framework.Tests.Visual.Input
             AddAssert("key not pressed", () => !testInputManager.CurrentState.Keyboard.Keys.HasAnyButtonPressed);
 
             AddStep("UseParentInput = true", () => testInputManager.UseParentInput = true);
-            AddAssert("key pressed", () => testInputManager.CurrentState.Keyboard.Keys.Single() == Key.A);
+            AddAssert("key pressed", () => testInputManager.CurrentState.Keyboard.Keys.Single() == KeyboardKey.From(Key.A));
 
             AddStep("release keyboard", () => InputManager.ReleaseKey(Key.A));
             AddAssert("key released", () => !testInputManager.CurrentState.Keyboard.Keys.HasAnyButtonPressed);
