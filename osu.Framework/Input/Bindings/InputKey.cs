@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Net;
 using osu.Framework.Extensions;
 using osu.Framework.Utils;
 using osuTK.Input;
@@ -46,22 +47,22 @@ namespace osu.Framework.Input.Bindings
             return (InputKey)key;
         }
 
-        public static InputKey Mangle(InputKey key, char c) // TODO: probably move to KeyCombination
+        public static InputKey Mangle(InputKey key, char character) // TODO: probably move to KeyCombination
         {
             // use the upper 16 bits to encode the char
 
             // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-            key |= (InputKey)(c << 16);
+            key |= (InputKey)(character << 16);
             return key;
         }
 
-        public static void Unmangle(InputKey key, out InputKey outKey, out char c)
+        public static void Unmangle(InputKey inputKey, out InputKey outKey, out char character)
         {
             const int char_mask = unchecked((int)0xFFFF0000);
-            c = (char)(((int)key & char_mask) >> 16);
+            character = (char)((int)inputKey >> 16);
 
             // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-            outKey = key & (InputKey)(~char_mask);
+            outKey = inputKey & (InputKey)(~char_mask);
         }
 
         private InputKeyWrapper(InputKey key)
