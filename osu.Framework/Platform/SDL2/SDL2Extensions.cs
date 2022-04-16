@@ -459,8 +459,10 @@ namespace osu.Framework.Platform.SDL2
                 case InputKey.F33:
                 case InputKey.F34:
                 case InputKey.F35:
-                case InputKey.Clear:
                     return SDL.SDL_Scancode.SDL_SCANCODE_UNKNOWN;
+
+                case InputKey.Clear:
+                    return SDL.SDL_Scancode.SDL_SCANCODE_KP_CLEAR;
 
                 case InputKey.Menu:
                     return SDL.SDL_Scancode.SDL_SCANCODE_MENU;
