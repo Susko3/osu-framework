@@ -31,38 +31,62 @@ namespace osu.Framework.Platform.SDL2
                 case SDL.SDL_Scancode.SDL_SCANCODE_UNKNOWN:
                     return Key.Unknown;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_COMMA:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_COMMA:
                     return Key.Comma;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_TAB:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_TAB:
                     return Key.Tab;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE:
                     return Key.BackSpace;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_A:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_A:
                     return Key.A;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_B:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_B:
                     return Key.B;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_C:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_C:
                     return Key.C;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_D:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_D:
                     return Key.D;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_E:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_E:
                     return Key.E;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_F:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_F:
                     return Key.F;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_SPACE:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_SPACE:
                     return Key.Space;
 
+                case SDL.SDL_Scancode.SDL_SCANCODE_CLEAR:
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_CLEAR:
+                    // also see SDL_SCANCODE_KP_5
                     return Key.Clear;
+
+                case SDL.SDL_Scancode.SDL_SCANCODE_STOP:
+                case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOSTOP:
+                    return Key.Stop;
+
+                case SDL.SDL_Scancode.SDL_SCANCODE_MUTE:
+                case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOMUTE:
+                    return Key.Mute;
+
+                case SDL.SDL_Scancode.SDL_SCANCODE_DECIMALSEPARATOR:
+                    // also see SDL_SCANCODE_KP_PERIOD
+                    return Key.KeypadPeriod;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_RETURN:
                     return Key.Enter;
@@ -70,20 +94,8 @@ namespace osu.Framework.Platform.SDL2
                 case SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE:
                     return Key.Escape;
 
-                case SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE:
-                    return Key.BackSpace;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_TAB:
-                    return Key.Tab;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_SPACE:
-                    return Key.Space;
-
                 case SDL.SDL_Scancode.SDL_SCANCODE_APOSTROPHE:
                     return Key.Quote;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_COMMA:
-                    return Key.Comma;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_MINUS:
                     return Key.Minus;
@@ -141,24 +153,6 @@ namespace osu.Framework.Platform.SDL2
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_GRAVE:
                     return Key.Tilde;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_A:
-                    return Key.A;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_B:
-                    return Key.B;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_C:
-                    return Key.C;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_D:
-                    return Key.D;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_E:
-                    return Key.E;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_F:
-                    return Key.F;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_G:
                     return Key.G;
@@ -391,23 +385,11 @@ namespace osu.Framework.Platform.SDL2
                 case SDL.SDL_Scancode.SDL_SCANCODE_MENU:
                     return Key.Menu;
 
-                case SDL.SDL_Scancode.SDL_SCANCODE_STOP:
-                    return Key.Stop;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_MUTE:
-                    return Key.Mute;
-
                 case SDL.SDL_Scancode.SDL_SCANCODE_VOLUMEUP:
                     return Key.VolumeUp;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_VOLUMEDOWN:
                     return Key.VolumeDown;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_CLEAR:
-                    return Key.Clear;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_DECIMALSEPARATOR:
-                    return Key.KeypadDecimal;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_LCTRL:
                     return Key.ControlLeft;
@@ -439,14 +421,8 @@ namespace osu.Framework.Platform.SDL2
                 case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOPREV:
                     return Key.TrackPrevious;
 
-                case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOSTOP:
-                    return Key.Stop;
-
                 case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOPLAY:
                     return Key.PlayPause;
-
-                case SDL.SDL_Scancode.SDL_SCANCODE_AUDIOMUTE:
-                    return Key.Mute;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_SLEEP:
                     return Key.Sleep;
