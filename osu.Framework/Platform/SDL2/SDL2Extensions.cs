@@ -20,7 +20,12 @@ namespace osu.Framework.Platform.SDL2
             // treat them as if they always have NumLock on (the numpad always performs its primary actions).
             bool numLockOn = sdlKeysym.mod.HasFlagFast(SDL.SDL_Keymod.KMOD_NUM) || RuntimeInfo.IsApple;
 
-            switch (sdlKeysym.scancode)
+            return sdlKeysym.scancode.ToKey(numLockOn);
+        }
+
+        public static Key ToKey(this SDL.SDL_Scancode scancode, bool numLockOn)
+        {
+            switch (scancode)
             {
                 default:
                 case SDL.SDL_Scancode.SDL_SCANCODE_UNKNOWN:
