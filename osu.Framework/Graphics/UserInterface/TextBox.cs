@@ -4,8 +4,8 @@
 #nullable disable
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using osu.Framework.Allocation;
@@ -21,13 +21,16 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
+using osu.Framework.Text.State;
+using osu.Framework.Text.State.Actions;
+using osu.Framework.Text.State.StateChanges;
 using osu.Framework.Threading;
 using osuTK;
 using osuTK.Input;
 
 namespace osu.Framework.Graphics.UserInterface
 {
-    public abstract class TextBox : TabbableContainer, IHasCurrentValue<string>, IKeyBindingHandler<PlatformAction>
+    public abstract class TextBox : TabbableContainer, IHasCurrentValue<string>, IKeyBindingHandler<PlatformAction>, IEditorStateChangeHandler
     {
         protected FillFlowContainer TextFlow { get; private set; }
         protected Container TextContainer { get; private set; }
@@ -207,6 +210,11 @@ namespace osu.Framework.Graphics.UserInterface
         {
             base.LoadComplete();
 
+            editorState = new EditorState();
+
+            if (!string.IsNullOrEmpty(initialText))
+                enqueueAction(new AddTextAction(initialText));
+
             isActive.BindValueChanged(_ => Scheduler.AddOnce(updateCaretVisibility));
             Current.BindDisabledChanged(disabled =>
             {
@@ -218,8 +226,6 @@ namespace osu.Framework.Graphics.UserInterface
                     FinalizeImeComposition(false);
                 }
             });
-
-            setText(Text);
         }
 
         public virtual bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
@@ -237,6 +243,10 @@ namespace osu.Framework.Graphics.UserInterface
 
             switch (e.Action)
             {
+                case PlatformAction.Undo:
+                    undoLastSuccessfulAction();
+                    break;
+
                 // Clipboard
                 case PlatformAction.Cut:
                 case PlatformAction.Copy:
@@ -258,14 +268,16 @@ namespace osu.Framework.Graphics.UserInterface
                         // This is currently only happening on iOS since it relies on a hidden UITextField for software keyboard.
                         return true;
 
-                    InsertString(clipboard?.GetText());
+                    if (clipboard != null)
+                    {
+                        enqueueAction(new AddTextAction(clipboard.GetText()));
+                    }
+
                     return true;
 
                 case PlatformAction.SelectAll:
-                    selectionStart = 0;
-                    selectionEnd = text.Length;
-                    cursorAndLayout.Invalidate();
                     onTextSelectionChanged(TextSelectionType.All, lastSelectionBounds);
+                    enqueueAction(new SelectAllAction());
                     return true;
 
                 // Cursor Manipulation
@@ -399,11 +411,9 @@ namespace osu.Framework.Graphics.UserInterface
         /// </summary>
         protected void MoveCursorBy(int amount)
         {
-            var lastSelectionBounds = getTextSelectionBounds();
-            selectionStart = selectionEnd;
-            cursorAndLayout.Invalidate();
-            moveSelection(amount, false);
-            onTextDeselected(lastSelectionBounds);
+            // TODO: fixme what?
+            onTextDeselected((0,0));
+            enqueueAction(new MoveCursorByAction(amount));
         }
 
         /// <summary>
@@ -411,7 +421,7 @@ namespace osu.Framework.Graphics.UserInterface
         /// </summary>
         protected void ExpandSelectionBy(int amount)
         {
-            moveSelection(amount, true);
+            enqueueAction(new ExpandSelectionByAction(amount));
         }
 
         /// <summary>
@@ -421,14 +431,7 @@ namespace osu.Framework.Graphics.UserInterface
         /// </summary>
         protected void DeleteBy(int amount)
         {
-            if (selectionLength == 0)
-                selectionEnd = Math.Clamp(selectionStart + amount, 0, text.Length);
-
-            if (selectionLength > 0)
-            {
-                string removedText = removeSelection();
-                OnUserTextRemoved(removedText);
-            }
+            enqueueAction(new DeleteByAction(amount));
         }
 
         /// <summary>
@@ -449,7 +452,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (!ImeCompositionActive && !imeCompositionScheduler.HasPendingTasks)
                 return;
 
-            imeCompositionScheduler.Add(() => onImeResult(userEvent, false));
+            // imeCompositionScheduler.Add(() => onImeResult(userEvent, false));
 
             if (textInputBound)
                 textInput.ResetIme();
@@ -472,7 +475,7 @@ namespace osu.Framework.Graphics.UserInterface
             if (textInputBound)
                 textInput.ResetIme();
 
-            imeCompositionScheduler.Add(() => onImeComposition(string.Empty, 0, 0, false));
+            // imeCompositionScheduler.Add(() => onImeComposition(string.Empty, 0, 0, false));
             imeCompositionScheduler.Update(); // same rationale as above, in `FinalizeImeComposition()`
         }
 
@@ -537,6 +540,11 @@ namespace osu.Framework.Graphics.UserInterface
             // we want the character drawables to be up-to date for further calculations in `updateCursorAndLayout()`.
             textInputScheduler.Update();
             imeCompositionScheduler.Update();
+
+            while (pendingActions.TryDequeue(out var action))
+            {
+                handleAction(action);
+            }
         }
 
         protected override void UpdateAfterChildren()
@@ -588,8 +596,8 @@ namespace osu.Framework.Graphics.UserInterface
             return i;
         }
 
-        private int selectionStart;
-        private int selectionEnd;
+        private int selectionStart => editorState.SelectionStart;
+        private int selectionEnd => editorState.SelectionEnd;
 
         private int selectionLength => Math.Abs(selectionEnd - selectionStart);
 
@@ -597,36 +605,6 @@ namespace osu.Framework.Graphics.UserInterface
         private int selectionRight => Math.Max(selectionStart, selectionEnd);
 
         private readonly Cached cursorAndLayout = new Cached();
-
-        private void moveSelection(int offset, bool expand)
-        {
-            if (textInput.ImeActive) return;
-
-            int oldStart = selectionStart;
-            int oldEnd = selectionEnd;
-
-            if (expand)
-                selectionEnd = Math.Clamp(selectionEnd + offset, 0, text.Length);
-            else
-            {
-                if (selectionLength > 0 && Math.Abs(offset) <= 1)
-                {
-                    //we don't want to move the location when "removing" an existing selection, just set the new location.
-                    if (offset > 0)
-                        selectionEnd = selectionStart = selectionRight;
-                    else
-                        selectionEnd = selectionStart = selectionLeft;
-                }
-                else
-                    selectionEnd = selectionStart = Math.Clamp((offset > 0 ? selectionRight : selectionLeft) + offset, 0, text.Length);
-            }
-
-            if (oldStart != selectionStart || oldEnd != selectionEnd)
-            {
-                OnCaretMoved(expand);
-                cursorAndLayout.Invalidate();
-            }
-        }
 
         /// <summary>
         /// Indicates whether a complex change operation to <see cref="Text"/> has begun.
@@ -664,61 +642,8 @@ namespace osu.Framework.Graphics.UserInterface
         }
 
         /// <summary>
-        /// Removes the selected text if a selection persists.
-        /// </summary>
-        private string removeSelection() => removeCharacters(selectionLength);
-
-        /// <summary>
         /// Removes a specified <paramref name="number"/> of characters left side of the current position.
         /// </summary>
-        /// <remarks>
-        /// If a selection persists, <see cref="removeSelection"/> must be called instead.
-        /// </remarks>
-        /// <returns>A string of the removed characters.</returns>
-        private string removeCharacters(int number = 1)
-        {
-            if (Current.Disabled || text.Length == 0)
-                return string.Empty;
-
-            int removeStart = Math.Clamp(selectionRight - number, 0, selectionRight);
-            int removeCount = selectionRight - removeStart;
-
-            if (removeCount == 0)
-                return string.Empty;
-
-            Debug.Assert(selectionLength == 0 || removeCount == selectionLength);
-
-            bool beganChange = beginTextChange();
-
-            foreach (var d in TextFlow.Children.Skip(removeStart).Take(removeCount).ToArray()) //ToArray since we are removing items from the children in this block.
-            {
-                TextFlow.Remove(d);
-
-                TextContainer.Add(d);
-
-                // account for potentially altered height of textbox
-                d.Y = TextFlow.BoundingBox.Y;
-
-                d.Hide();
-                d.Expire();
-            }
-
-            string removedText = text.Substring(removeStart, removeCount);
-
-            text = text.Remove(removeStart, removeCount);
-
-            // Reorder characters depth after removal to avoid ordering issues with newly added characters.
-            for (int i = removeStart; i < TextFlow.Count; i++)
-                TextFlow.ChangeChildDepth(TextFlow[i], getDepthForCharacterIndex(i));
-
-            selectionStart = selectionEnd = removeStart;
-
-            endTextChange(beganChange);
-            cursorAndLayout.Invalidate();
-
-            return removedText;
-        }
-
         /// <summary>
         /// Creates a single character. Override <see cref="Drawable.Show"/> and <see cref="Drawable.Hide"/> for custom behavior.
         /// </summary>
@@ -726,23 +651,23 @@ namespace osu.Framework.Graphics.UserInterface
         /// <returns>A <see cref="Drawable"/> that represents the character <paramref name="c"/> </returns>
         protected virtual Drawable GetDrawableCharacter(char c) => new SpriteText { Text = c.ToString(), Font = new FontUsage(size: CalculatedTextSize) };
 
-        protected virtual Drawable AddCharacterToFlow(char c)
+        private Drawable addCharacterToFlow(char c, int index)
         {
             // Remove all characters to the right and store them in a local list,
             // such that their depth can be updated.
             List<Drawable> charsRight = new List<Drawable>();
-            foreach (Drawable d in TextFlow.Children.Skip(selectionLeft))
+            foreach (Drawable d in TextFlow.Children.Skip(index))
                 charsRight.Add(d);
             TextFlow.RemoveRange(charsRight);
 
             // Update their depth to make room for the to-be inserted character.
-            int i = selectionLeft;
+            int i = index;
             foreach (Drawable d in charsRight)
                 d.Depth = getDepthForCharacterIndex(i++);
 
             // Add the character
             Drawable ch = GetDrawableCharacter(c);
-            ch.Depth = getDepthForCharacterIndex(selectionLeft);
+            ch.Depth = getDepthForCharacterIndex(index);
 
             TextFlow.Add(ch);
 
@@ -756,57 +681,14 @@ namespace osu.Framework.Graphics.UserInterface
 
         protected float CalculatedTextSize => TextFlow.DrawSize.Y - (TextFlow.Padding.Top + TextFlow.Padding.Bottom);
 
-        protected void InsertString(string value)
-        {
-            // inserting text could insert it in the middle of an active composition, leading to an invalid state.
-            // so finalize the composition before adding text.
-            FinalizeImeComposition(false);
-
-            insertString(value);
-        }
-
-        private void insertString(string value, Action<Drawable> drawableCreationParameters = null)
-        {
-            if (string.IsNullOrEmpty(value)) return;
-
-            if (Current.Disabled)
-            {
-                NotifyInputError();
-                return;
-            }
-
-            bool beganChange = beginTextChange();
-
-            foreach (char c in value)
-            {
-                if (!canAddCharacter(c))
-                {
-                    NotifyInputError();
-                    continue;
-                }
-
-                if (selectionLength > 0)
-                    removeSelection();
-
-                if (text.Length + 1 > LengthLimit)
-                {
-                    NotifyInputError();
-                    break;
-                }
-
-                Drawable drawable = AddCharacterToFlow(c);
-
-                drawable.Show();
-                drawableCreationParameters?.Invoke(drawable);
-
-                text = text.Insert(selectionLeft, c.ToString());
-                selectionStart = selectionEnd = selectionLeft + 1;
-
-                cursorAndLayout.Invalidate();
-            }
-
-            endTextChange(beganChange);
-        }
+        // protected void InsertString(string value)
+        // {
+        //     // inserting text could insert it in the middle of an active composition, leading to an invalid state.
+        //     // so finalize the composition before adding text.
+        //     FinalizeImeComposition(false);
+        //
+        //     insertString(value);
+        // }
 
         /// <summary>
         /// Called whenever an invalid character has been entered
@@ -954,50 +836,60 @@ namespace osu.Framework.Graphics.UserInterface
             set => current.Current = value;
         }
 
-        private string text = string.Empty;
+        private string initialText = string.Empty;
 
-        public virtual string Text
+        private string text
+        {
+            get => editorState?.Text.ToString() ?? initialText;
+        }
+
+        public string Text
         {
             get => text;
             set
             {
-                if (Current.Disabled)
-                    return;
+                if (editorState == null)
+                {
+                    initialText = value;
+                }
 
-                if (value == text)
-                    return;
-
-                lastCommitText = value ??= string.Empty;
-
-                if (value.Length == 0)
-                    Placeholder.Show();
-                else
-                    Placeholder.Hide();
-
-                setText(value);
+                // if (Current.Disabled)
+                //     return;
+                //
+                // if (value == text)
+                //     return;
+                //
+                // lastCommitText = value ??= string.Empty;
+                //
+                // if (value.Length == 0)
+                //     Placeholder.Show();
+                // else
+                //     Placeholder.Hide();
+                //
+                // setText(value);
             }
         }
 
-        private void setText(string value)
-        {
-            bool beganChange = beginTextChange();
-
-            // finalize and cleanup the IME composition (if one is active) so we get a clean slate for pending text changes and future IME composition.
-            // `IsLoaded` check is required because `Text` could be set in the initializer / before the drawable loaded.
-            // `FinalizeImeComposition()` crashes if textbox isn't fully loaded.
-            if (IsLoaded) FinalizeImeComposition(false);
-
-            selectionStart = selectionEnd = 0;
-
-            TextFlow?.Clear();
-            text = string.Empty;
-
-            // insert string and fast forward any transforms (generally when replacing the full content of a textbox we don't want any kind of fade etc.).
-            insertString(value, d => d.FinishTransforms());
-
-            endTextChange(beganChange);
-            cursorAndLayout.Invalidate();
-        }
+        // private void setText(string value)
+        // {
+        //     bool beganChange = beginTextChange();
+        //
+        //     // finalize and cleanup the IME composition (if one is active) so we get a clean slate for pending text changes and future IME composition.
+        //     // `IsLoaded` check is required because `Text` could be set in the initializer / before the drawable loaded.
+        //     // `FinalizeImeComposition()` crashes if textbox isn't fully loaded.
+        //     if (IsLoaded) FinalizeImeComposition(false);
+        //
+        //     selectionStart = selectionEnd = 0;
+        //
+        //     TextFlow?.Clear();
+        //     text = string.Empty;
+        //
+        //     // insert string and fast forward any transforms (generally when replacing the full content of a textbox we don't want any kind of fade etc.).
+        //     insertString(value, d => d.FinishTransforms());
+        //
+        //     endTextChange(beganChange);
+        //     cursorAndLayout.Invalidate();
+        // }
 
         public string SelectedText => selectionLength > 0 ? Text.Substring(selectionLeft, selectionLength) : string.Empty;
 
@@ -1123,6 +1015,9 @@ namespace osu.Framework.Graphics.UserInterface
 
         protected override void OnDrag(DragEvent e)
         {
+            int selectionStart = this.selectionStart;
+            int selectionEnd = this.selectionEnd;
+
             if (ReadOnly)
                 return;
 
@@ -1156,14 +1051,16 @@ namespace osu.Framework.Graphics.UserInterface
             {
                 if (text.Length == 0) return;
 
-                selectionEnd = getCharacterClosestTo(e.MousePosition);
-                if (selectionLength > 0)
-                    GetContainingInputManager().ChangeFocus(this);
+                // TOOD: FIXME
+                // if (selectionLength > 0)
+                // GetContainingInputManager().ChangeFocus(this);
             }
 
-            cursorAndLayout.Invalidate();
-
             onTextSelectionChanged(doubleClickWord != null ? TextSelectionType.Word : TextSelectionType.Character, lastSelectionBounds);
+
+            enqueueAction(new SetSelectionAction(selectionStart, selectionEnd));
+
+            cursorAndLayout.Invalidate();
         }
 
         protected override bool OnDragStart(DragStartEvent e)
@@ -1177,6 +1074,9 @@ namespace osu.Framework.Graphics.UserInterface
 
         protected override bool OnDoubleClick(DoubleClickEvent e)
         {
+            int selectionStart = this.selectionStart;
+            int selectionEnd = this.selectionEnd;
+
             FinalizeImeComposition(true);
 
             var lastSelectionBounds = getTextSelectionBounds();
@@ -1201,6 +1101,8 @@ namespace osu.Framework.Graphics.UserInterface
 
             //in order to keep the home word selected
             doubleClickWord = new[] { selectionStart, selectionEnd };
+
+            enqueueAction(new SetSelectionAction(selectionStart, selectionEnd));
 
             cursorAndLayout.Invalidate();
 
@@ -1228,14 +1130,14 @@ namespace osu.Framework.Graphics.UserInterface
                 return true;
 
             FinalizeImeComposition(true);
+            int selection = getCharacterClosestTo(e.MousePosition);
 
-            var lastSelectionBounds = getTextSelectionBounds();
-
-            selectionStart = selectionEnd = getCharacterClosestTo(e.MousePosition);
+            enqueueAction(new SetSelectionAction(selection, selection));
 
             cursorAndLayout.Invalidate();
 
-            onTextDeselected(lastSelectionBounds);
+            // TODO: fixme, should be in SetSelectionAction.
+            onTextDeselected((0, 0));
 
             return false;
         }
@@ -1330,8 +1232,10 @@ namespace osu.Framework.Graphics.UserInterface
         {
             textInputBlocking = true;
 
-            InsertString(t);
-            OnUserTextAdded(t);
+            enqueueAction(new AddTextAction(t));
+
+            // InsertString(t);
+            // OnUserTextAdded(t);
 
             // clear the flag in the next frame if no buttons are pressed/held.
             // needed in case a text event happens without an associated button press (and release).
@@ -1347,16 +1251,16 @@ namespace osu.Framework.Graphics.UserInterface
 
         private void handleImeComposition(string composition, int selectionStart, int selectionLength)
         {
-            imeCompositionScheduler.Add(() => onImeComposition(composition, selectionStart, selectionLength, true));
+            // imeCompositionScheduler.Add(() => onImeComposition(composition, selectionStart, selectionLength, true));
         }
 
         private void handleImeResult(string result)
         {
-            imeCompositionScheduler.Add(() =>
-            {
-                onImeComposition(result, result.Length, 0, false);
-                onImeResult(true, true);
-            });
+            // imeCompositionScheduler.Add(() =>
+            // {
+            // onImeComposition(result, result.Length, 0, false);
+            // onImeResult(true, true);
+            // });
         }
 
         /// <summary>
@@ -1473,138 +1377,138 @@ namespace osu.Framework.Graphics.UserInterface
         /// </summary>
         private int imeCompositionStart;
 
-        /// <remarks>
-        /// This checks which parts of the old and new compositions match,
-        /// and only updates the non-matching part in the current composition text.
-        /// </remarks>
-        private void onImeComposition(string newComposition, int newSelectionStart, int newSelectionLength, bool userEvent)
-        {
-            if (Current.Disabled)
-            {
-                // don't raise error if composition text is empty, as the empty event could be generated indirectly,
-                // and not by explicit user interaction. eg. if IME is reset, input language is changed, etc.
-                if (userEvent && !string.IsNullOrEmpty(newComposition))
-                {
-                    NotifyInputError();
-
-                    // importantly, we want to reset the IME so it doesn't falsely report that IME composition is active.
-                    textInput.ResetIme();
-                }
-
-                return;
-            }
-
-            // used for tracking the selection to report for `OnImeComposition()`
-            int oldStart = selectionStart;
-            int oldEnd = selectionEnd;
-
-            if (imeCompositionLength == 0)
-            {
-                // this is the start of a new composition, as we currently have no composition text.
-
-                imeCompositionStart = selectionLeft;
-
-                if (string.IsNullOrEmpty(newComposition))
-                {
-                    // we might get an empty composition when the IME is first activated,
-                    // the IME mode has changed (eg. plaintext -> kana),
-                    // or when the keyboard layout and language have changed to a one supported by an IME.
-                    // we can use this opportunity to update the IME window so it appears in
-                    // the correct place once the user starts compositing.
-                    updateImeWindowPosition();
-
-                    // early return as SDL might sometimes send empty text editing events.
-                    // we don't want the currently selected text to be removed in that case
-                    // (we only want it removed once the user has entered _some_ text).
-                    // the composition text hasn't changed anyway, so there is no need to go
-                    // through the rest of the method.
-                    return;
-                }
-
-                if (selectionLength > 0)
-                    removeSelection();
-            }
-
-            bool beganChange = beginTextChange();
-
-            if (sanitizeComposition(ref newComposition, ref newSelectionStart, ref newSelectionLength))
-            {
-                NotifyInputError();
-            }
-
-            string oldComposition = text.Substring(imeCompositionStart, imeCompositionLength);
-
-            matchBeginningEnd(oldComposition, newComposition, out int matchBeginning, out int matchEnd);
-
-            // how many characters have been removed, starting from `matchBeginning`
-            int removeCount = oldComposition.Length - matchEnd - matchBeginning;
-
-            // remove the characters that don't match
-            if (removeCount > 0)
-            {
-                selectionStart = imeCompositionStart + matchBeginning;
-                selectionEnd = selectionStart + removeCount;
-                removeSelection();
-
-                imeCompositionDrawables.RemoveRange(matchBeginning, removeCount);
-            }
-
-            // how many characters have been added, starting from `matchBeginning`
-            int addCount = newComposition.Length - matchEnd - matchBeginning;
-
-            if (addCount > 0)
-            {
-                string addedText = newComposition.Substring(matchBeginning, addCount);
-
-                // set up selection for `insertString`
-                selectionStart = selectionEnd = imeCompositionStart + matchBeginning;
-
-                int insertPosition = matchBeginning;
-                insertString(addedText, d =>
-                {
-                    d.Alpha = 0.6f;
-                    imeCompositionDrawables.Insert(insertPosition++, d);
-                });
-            }
-
-            // update the selection to the one the IME requested.
-            // this selection is only a hint to the user, and is not used in the compositing logic.
-            selectionStart = imeCompositionStart + newSelectionStart;
-            selectionEnd = selectionStart + newSelectionLength;
-
-            if (userEvent) OnImeComposition(newComposition, removeCount, addCount, oldStart != selectionStart || oldEnd != selectionEnd);
-
-            endTextChange(beganChange);
-            cursorAndLayout.Invalidate();
-        }
-
-        private void onImeResult(bool userEvent, bool successful)
-        {
-            if (Current.Disabled)
-            {
-                if (userEvent) NotifyInputError();
-                // importantly, we don't return here so that we can finalize the composition
-                // if we were called because Current was disabled.
-            }
-
-            // we only succeeded if there is pending data in the textbox
-            if (imeCompositionDrawables.Count > 0)
-            {
-                foreach (var d in imeCompositionDrawables)
-                {
-                    d.FadeTo(1, 200, Easing.Out);
-                }
-
-                // move the cursor to end of finalized composition.
-                selectionStart = selectionEnd = imeCompositionStart + imeCompositionLength;
-
-                if (userEvent) OnImeResult(text.Substring(imeCompositionStart, imeCompositionLength), successful);
-            }
-
-            imeCompositionDrawables.Clear();
-
-            cursorAndLayout.Invalidate();
-        }
+        // /// <remarks>
+        // /// This checks which parts of the old and new compositions match,
+        // /// and only updates the non-matching part in the current composition text.
+        // /// </remarks>
+        // private void onImeComposition(string newComposition, int newSelectionStart, int newSelectionLength, bool userEvent)
+        // {
+        //     if (Current.Disabled)
+        //     {
+        //         // don't raise error if composition text is empty, as the empty event could be generated indirectly,
+        //         // and not by explicit user interaction. eg. if IME is reset, input language is changed, etc.
+        //         if (userEvent && !string.IsNullOrEmpty(newComposition))
+        //         {
+        //             NotifyInputError();
+        //
+        //             // importantly, we want to reset the IME so it doesn't falsely report that IME composition is active.
+        //             textInput.ResetIme();
+        //         }
+        //
+        //         return;
+        //     }
+        //
+        //     // used for tracking the selection to report for `OnImeComposition()`
+        //     int oldStart = selectionStart;
+        //     int oldEnd = selectionEnd;
+        //
+        //     if (imeCompositionLength == 0)
+        //     {
+        //         // this is the start of a new composition, as we currently have no composition text.
+        //
+        //         imeCompositionStart = selectionLeft;
+        //
+        //         if (string.IsNullOrEmpty(newComposition))
+        //         {
+        //             // we might get an empty composition when the IME is first activated,
+        //             // the IME mode has changed (eg. plaintext -> kana),
+        //             // or when the keyboard layout and language have changed to a one supported by an IME.
+        //             // we can use this opportunity to update the IME window so it appears in
+        //             // the correct place once the user starts compositing.
+        //             updateImeWindowPosition();
+        //
+        //             // early return as SDL might sometimes send empty text editing events.
+        //             // we don't want the currently selected text to be removed in that case
+        //             // (we only want it removed once the user has entered _some_ text).
+        //             // the composition text hasn't changed anyway, so there is no need to go
+        //             // through the rest of the method.
+        //             return;
+        //         }
+        //
+        //         if (selectionLength > 0)
+        //             removeSelection();
+        //     }
+        //
+        //     bool beganChange = beginTextChange();
+        //
+        //     if (sanitizeComposition(ref newComposition, ref newSelectionStart, ref newSelectionLength))
+        //     {
+        //         NotifyInputError();
+        //     }
+        //
+        //     string oldComposition = text.Substring(imeCompositionStart, imeCompositionLength);
+        //
+        //     matchBeginningEnd(oldComposition, newComposition, out int matchBeginning, out int matchEnd);
+        //
+        //     // how many characters have been removed, starting from `matchBeginning`
+        //     int removeCount = oldComposition.Length - matchEnd - matchBeginning;
+        //
+        //     // remove the characters that don't match
+        //     if (removeCount > 0)
+        //     {
+        //         selectionStart = imeCompositionStart + matchBeginning;
+        //         selectionEnd = selectionStart + removeCount;
+        //         removeSelection();
+        //
+        //         imeCompositionDrawables.RemoveRange(matchBeginning, removeCount);
+        //     }
+        //
+        //     // how many characters have been added, starting from `matchBeginning`
+        //     int addCount = newComposition.Length - matchEnd - matchBeginning;
+        //
+        //     if (addCount > 0)
+        //     {
+        //         string addedText = newComposition.Substring(matchBeginning, addCount);
+        //
+        //         // set up selection for `insertString`
+        //         selectionStart = selectionEnd = imeCompositionStart + matchBeginning;
+        //
+        //         int insertPosition = matchBeginning;
+        //         insertString(addedText, d =>
+        //         {
+        //             d.Alpha = 0.6f;
+        //             imeCompositionDrawables.Insert(insertPosition++, d);
+        //         });
+        //     }
+        //
+        //     // update the selection to the one the IME requested.
+        //     // this selection is only a hint to the user, and is not used in the compositing logic.
+        //     selectionStart = imeCompositionStart + newSelectionStart;
+        //     selectionEnd = selectionStart + newSelectionLength;
+        //
+        //     if (userEvent) OnImeComposition(newComposition, removeCount, addCount, oldStart != selectionStart || oldEnd != selectionEnd);
+        //
+        //     endTextChange(beganChange);
+        //     cursorAndLayout.Invalidate();
+        // }
+        //
+        // private void onImeResult(bool userEvent, bool successful)
+        // {
+        //     if (Current.Disabled)
+        //     {
+        //         if (userEvent) NotifyInputError();
+        //         // importantly, we don't return here so that we can finalize the composition
+        //         // if we were called because Current was disabled.
+        //     }
+        //
+        //     // we only succeeded if there is pending data in the textbox
+        //     if (imeCompositionDrawables.Count > 0)
+        //     {
+        //         foreach (var d in imeCompositionDrawables)
+        //         {
+        //             d.FadeTo(1, 200, Easing.Out);
+        //         }
+        //
+        //         // move the cursor to end of finalized composition.
+        //         selectionStart = selectionEnd = imeCompositionStart + imeCompositionLength;
+        //
+        //         if (userEvent) OnImeResult(text.Substring(imeCompositionStart, imeCompositionLength), successful);
+        //     }
+        //
+        //     imeCompositionDrawables.Clear();
+        //
+        //     cursorAndLayout.Invalidate();
+        // }
 
         /// <summary>
         /// Updates the location of the platform-native IME composition window
@@ -1674,5 +1578,148 @@ namespace osu.Framework.Graphics.UserInterface
             /// </summary>
             All
         }
+
+        #region EditorState
+
+        private EditorState editorState;
+        private readonly LimitedUndoStack undoStack = new LimitedUndoStack(50);
+        private readonly ConcurrentQueue<EditorAction> pendingActions = new ConcurrentQueue<EditorAction>();
+
+        private void enqueueAction(EditorAction action)
+        {
+            if (ThreadSafety.IsUpdateThread)
+                handleAction(action);
+            else
+                pendingActions.Enqueue(action);
+        }
+
+        private void handleAction(EditorAction action)
+        {
+            bool stateChanged = action.Apply(editorState, this);
+
+            // the handler has full rights to undo the action when handling it.
+            // don't add it to the undo stack if it was undone.
+
+            if (stateChanged && !action.Undone)
+                undoStack.Push(action);
+        }
+
+        private void undoLastSuccessfulAction()
+        {
+            if (!undoStack.TryPop(out var action)) return;
+
+            try
+            {
+                action.Undo(editorState, this);
+            }
+            catch (Exception e)
+            {
+                undoStack.Clear(); // clear the invalid state
+                Logging.Logger.Log($"Failed to undo {action}: {e}");
+            }
+        }
+
+        public void HandleTextStateChange(EditorStateChange editorEvent)
+        {
+            Logging.Logger.Log($"HandleTextStateChange: {editorEvent}");
+
+            switch (editorEvent)
+            {
+                case TextAddedStateChange added:
+                    addCharactersToFlow(added.Text, added.StartIndex);
+                    break;
+
+                case TextRemovedStateChange removed:
+                    removeCharactersFromFlow(removed.StartIndex, removed.Count);
+                    break;
+            }
+
+            cursorAndLayout.Invalidate();
+        }
+
+        private void addCharactersToFlow(string value, int startIndex, Action<Drawable> drawableCreationParameters = null)
+        {
+            int index = startIndex;
+
+            foreach (char c in value)
+            {
+                Drawable drawable = addCharacterToFlow(c, index);
+
+                drawable.Show();
+                drawableCreationParameters?.Invoke(drawable);
+
+                index++;
+            }
+
+            cursorAndLayout.Invalidate();
+        }
+
+        private void removeCharactersFromFlow(int removeStart, int removeCount)
+        {
+            foreach (var d in TextFlow.Children.Skip(removeStart).Take(removeCount).ToArray()) // ToArray since we are removing items from the children in this block.
+            {
+                TextFlow.Remove(d);
+
+                TextContainer.Add(d);
+
+                // account for potentially altered height of textbox
+                d.Y = TextFlow.BoundingBox.Y;
+
+                d.Hide();
+                d.Expire();
+            }
+
+            // Reorder characters depth after removal to avoid ordering issues with newly added characters.
+            for (int i = removeStart; i < TextFlow.Count; i++)
+                TextFlow.ChangeChildDepth(TextFlow[i], getDepthForCharacterIndex(i));
+
+            cursorAndLayout.Invalidate();
+        }
+
+        /// <summary>
+        /// lol
+        /// </summary>
+        private class LimitedUndoStack
+        {
+            private readonly LinkedList<EditorAction> list = new LinkedList<EditorAction>();
+
+            public readonly int UndoCount;
+
+            public LimitedUndoStack(int undoCount)
+            {
+                UndoCount = undoCount;
+            }
+
+            public void Clear() => list.Clear();
+
+            public bool Contains(EditorAction action) => list.Contains(action);
+
+            public void Push(EditorAction action)
+            {
+                list.AddLast(action);
+                trimExcess();
+            }
+
+            public bool TryPop(out EditorAction action)
+            {
+                action = list.Last?.Value;
+
+                if (action != null) list.RemoveLast();
+
+                return action != null;
+            }
+
+            private void trimExcess()
+            {
+                int actionsToRemove = list.Count - UndoCount * 2; // 2x count for all actions
+                // 1x count for text-changing actions.
+
+                for (int i = 0; i < actionsToRemove; i++)
+                    list.RemoveFirst();
+            }
+        }
+
+        #endregion
+
     }
 }

@@ -839,7 +839,9 @@ namespace osu.Framework.Tests.Visual.UserInterface
             /// </summary>
             public string FlowingText => string.Concat(TextFlow.FlowingChildren.OfType<FallingDownContainer>().Select(c => c.OfType<SpriteText>().Single().Text.ToString()[0]));
 
-            public new void InsertString(string text) => base.InsertString(text);
+            public new void InsertString(string text)
+            {
+            }
         }
 
         private class NumberTextBox : BasicTextBox
