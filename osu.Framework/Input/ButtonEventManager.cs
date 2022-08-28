@@ -17,6 +17,7 @@ namespace osu.Framework.Input
     /// Manages state and events for a single button.
     /// </summary>
     public abstract class ButtonEventManager<TButton>
+        where TButton : Enum
     {
         /// <summary>
         /// The button this <see cref="ButtonEventManager{TButton}"/> manages.

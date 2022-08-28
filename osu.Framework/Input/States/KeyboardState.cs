@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using osuTK.Input;
 
 namespace osu.Framework.Input.States
@@ -8,6 +9,13 @@ namespace osu.Framework.Input.States
     public class KeyboardState
     {
         public readonly ButtonStates<Key> Keys = new ButtonStates<Key>();
+
+        /// <summary>
+        /// Mapping of keys to characters printed on them.
+        /// </summary>
+        public readonly Dictionary<Key, char> Characters = new Dictionary<Key, char>();
+
+        public bool IsPressed(char character) => Characters.ContainsValue(character);
 
         /// <summary>
         /// Whether left or right control key is pressed.

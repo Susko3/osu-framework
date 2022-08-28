@@ -1,10 +1,97 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable enable
+
+using System;
+using osu.Framework.Extensions;
 using osu.Framework.Utils;
+using osuTK.Input;
 
 namespace osu.Framework.Input.Bindings
 {
+    // što nam treba:
+
+    /// <summary>
+    /// A wrapper around <see cref="Bindings.InputKey"/>, allowing implicit conversions from <see cref="Bindings.InputKey"/> and <see cref="char"/>.
+    /// </summary>
+    public readonly struct InputKeyWrapper //: IKeyChar<InputKey>
+    {
+        public readonly InputKey InputKey;
+
+        public static InputKey ToInputKey(KeyboardKey key) => Mangle(toInputKey(key.Key), key.Character);
+
+        private static InputKey toInputKey(Key key)
+        {
+            switch (key)
+            {
+                case Key.LShift: return InputKey.LShift;
+
+                case Key.RShift: return InputKey.RShift;
+
+                case Key.LControl: return InputKey.LControl;
+
+                case Key.RControl: return InputKey.RControl;
+
+                case Key.LAlt: return InputKey.LAlt;
+
+                case Key.RAlt: return InputKey.RAlt;
+
+                case Key.LWin: return InputKey.LSuper;
+
+                case Key.RWin: return InputKey.RSuper;
+            }
+
+            // other then the above, keyboard keys are a one-to-one mapping from Key to InputKey.
+            return (InputKey)key;
+        }
+
+        public static InputKey Mangle(InputKey key, char character) // TODO: probably move to KeyCombination
+        {
+            // use the upper 16 bits to encode the char
+
+            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+            key |= (InputKey)(character << 16);
+            return key;
+        }
+
+        public static void Unmangle(InputKey inputKey, out InputKey outKey, out char character)
+        {
+            const int char_mask = unchecked((int)0xFFFF0000);
+            character = (char)((int)inputKey >> 16);
+
+            // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+            outKey = inputKey & (InputKey)(~char_mask);
+        }
+
+        private InputKeyWrapper(InputKey key)
+        {
+            InputKey = key;
+        }
+
+        /// <param name="character">Should be a lower case character.</param>
+        private InputKeyWrapper(char character)
+        {
+            string lower = character.ToString().ToLowerInvariant();
+
+            // hopefully the lowercase version of this character isn't a UTF-16 surrogate pair (two characters!).
+            if (lower.Length != 1)
+                throw new ArgumentException($"Invalid lowercase representation of character {character.StringRepresentation()}: \"{lower}\"");
+
+            InputKey = Mangle(InputKey.Any, lower[0]);
+        }
+
+        public static implicit operator InputKeyWrapper(InputKey key) => new InputKeyWrapper(key);
+
+        public static implicit operator InputKeyWrapper(char character) => new InputKeyWrapper(character);
+    }
+
+    // public struct InputKey
+    // {
+    //     public NotInputKey Key;
+    //     public static implicit operator NotInputKey(InputKey inputKey) => inputKey.Key;
+    // }
+
     /// <summary>
     /// A collection of keys, mouse and other controllers' buttons.
     /// </summary>
@@ -39,6 +126,16 @@ namespace osu.Framework.Input.Bindings
         /// </summary>
         [Order(4)]
         Super = 7,
+
+        /// <summary>
+        /// The windows key (equivalent to <see cref="Super"/>).
+        /// </summary>
+        Windows = Super,
+
+        /// <summary>
+        /// The command key (equivalent to <see cref="Super"/>).
+        /// </summary>
+        Command = Super,
 
         /// <summary>
         /// The menu key.
@@ -813,6 +910,11 @@ namespace osu.Framework.Input.Bindings
         /// The media next key.
         /// </summary>
         TrackNext,
+
+        /// <summary>
+        /// Represents any keyboard key, to be used with TODO.
+        /// </summary>
+        Any,
 
         /// <summary>
         /// The left shift key.

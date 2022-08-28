@@ -569,7 +569,8 @@ namespace osu.Framework.Testing
                 case MethodInfo sm:
                     int methodParamsLength = sm.GetParameters().Length;
                     if (methodParamsLength != (tcs.MethodParams?.Length ?? 0))
-                        throw new InvalidOperationException($"The given source method parameters count doesn't match the method. (attribute has {tcs.MethodParams?.Length ?? 0}, method has {methodParamsLength})");
+                        throw new InvalidOperationException(
+                            $"The given source method parameters count doesn't match the method. (attribute has {tcs.MethodParams?.Length ?? 0}, method has {methodParamsLength})");
 
                     return (IEnumerable)sm.Invoke(null, tcs.MethodParams);
 

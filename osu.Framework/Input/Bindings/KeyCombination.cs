@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Input.States;
 using osuTK;
@@ -15,7 +16,7 @@ using osuTK.Input;
 namespace osu.Framework.Input.Bindings
 {
     /// <summary>
-    /// Represent a combination of more than one <see cref="InputKey"/>s.
+    /// Represent a combination one or more <see cref="InputKey"/>s.
     /// </summary>
     public readonly struct KeyCombination : IEquatable<KeyCombination>
     {
@@ -47,6 +48,16 @@ namespace osu.Framework.Input.Bindings
         }
 
         /// <summary>
+        /// Construct a new instance.
+        /// </summary>
+        /// <param name="keys">The keys.</param>
+        /// <remarks>This constructor is not optimized. Hot paths are assumed to use <see cref="FromInputState(InputState, Vector2?)"/>.</remarks>
+        public KeyCombination(params InputKeyWrapper[] keys)
+            : this(keys.Select(w => w.InputKey))
+        {
+        }
+
+        /// <summary>
         /// Construct a new instance from string representation provided by <see cref="ToString"/>.
         /// </summary>
         /// <param name="keys">A comma-separated (KeyCode in integer) string representation of the keys.</param>
@@ -73,7 +84,7 @@ namespace osu.Framework.Input.Bindings
         /// <returns>Whether the pressedKeys keys are valid.</returns>
         public bool IsPressed(KeyCombination pressedKeys, KeyCombinationMatchingMode matchingMode)
         {
-            Debug.Assert(!pressedKeys.Keys.Contains(InputKey.None)); // Having None in pressed keys will break IsPressed
+            Debug.Assert(!pressedKeys.Keys.ContainsKey(InputKey.None)); // Having None in pressed keys will break IsPressed
 
             if (Keys == pressedKeys.Keys) // Fast test for reference equality of underlying array
                 return true;
@@ -143,28 +154,28 @@ namespace osu.Framework.Input.Bindings
             {
                 case InputKey.LControl:
                 case InputKey.RControl:
-                    if (candidate.Contains(InputKey.Control))
+                    if (candidate.ContainsKey(InputKey.Control))
                         return true;
 
                     break;
 
                 case InputKey.LShift:
                 case InputKey.RShift:
-                    if (candidate.Contains(InputKey.Shift))
+                    if (candidate.ContainsKey(InputKey.Shift))
                         return true;
 
                     break;
 
                 case InputKey.RAlt:
                 case InputKey.LAlt:
-                    if (candidate.Contains(InputKey.Alt))
+                    if (candidate.ContainsKey(InputKey.Alt))
                         return true;
 
                     break;
 
                 case InputKey.LSuper:
                 case InputKey.RSuper:
-                    if (candidate.Contains(InputKey.Super))
+                    if (candidate.ContainsKey(InputKey.Super))
                         return true;
 
                     break;
@@ -185,31 +196,31 @@ namespace osu.Framework.Input.Bindings
             switch (key)
             {
                 case InputKey.Control:
-                    if (candidate.Contains(InputKey.LControl) || candidate.Contains(InputKey.RControl))
+                    if (candidate.ContainsKey(InputKey.LControl) || candidate.ContainsKey(InputKey.RControl))
                         return true;
 
                     break;
 
                 case InputKey.Shift:
-                    if (candidate.Contains(InputKey.LShift) || candidate.Contains(InputKey.RShift))
+                    if (candidate.ContainsKey(InputKey.LShift) || candidate.ContainsKey(InputKey.RShift))
                         return true;
 
                     break;
 
                 case InputKey.Alt:
-                    if (candidate.Contains(InputKey.LAlt) || candidate.Contains(InputKey.RAlt))
+                    if (candidate.ContainsKey(InputKey.LAlt) || candidate.ContainsKey(InputKey.RAlt))
                         return true;
 
                     break;
 
                 case InputKey.Super:
-                    if (candidate.Contains(InputKey.LSuper) || candidate.Contains(InputKey.RSuper))
+                    if (candidate.ContainsKey(InputKey.LSuper) || candidate.ContainsKey(InputKey.RSuper))
                         return true;
 
                     break;
             }
 
-            return candidate.Contains(key);
+            return candidate.ContainsKey(key);
         }
 
         public bool Equals(KeyCombination other) => Keys.SequenceEqual(other.Keys);
@@ -246,25 +257,25 @@ namespace osu.Framework.Input.Bindings
                 switch (key)
                 {
                     case InputKey.Control:
-                        if (sortedKeys.Contains(InputKey.LControl) || sortedKeys.Contains(InputKey.RControl))
+                        if (sortedKeys.ContainsKey(InputKey.LControl) || sortedKeys.ContainsKey(InputKey.RControl))
                             return null;
 
                         break;
 
                     case InputKey.Shift:
-                        if (sortedKeys.Contains(InputKey.LShift) || sortedKeys.Contains(InputKey.RShift))
+                        if (sortedKeys.ContainsKey(InputKey.LShift) || sortedKeys.ContainsKey(InputKey.RShift))
                             return null;
 
                         break;
 
                     case InputKey.Alt:
-                        if (sortedKeys.Contains(InputKey.LAlt) || sortedKeys.Contains(InputKey.RAlt))
+                        if (sortedKeys.ContainsKey(InputKey.LAlt) || sortedKeys.ContainsKey(InputKey.RAlt))
                             return null;
 
                         break;
 
                     case InputKey.Super:
-                        if (sortedKeys.Contains(InputKey.LSuper) || sortedKeys.Contains(InputKey.RSuper))
+                        if (sortedKeys.ContainsKey(InputKey.LSuper) || sortedKeys.ContainsKey(InputKey.RSuper))
                             return null;
 
                         break;
@@ -570,29 +581,7 @@ namespace osu.Framework.Input.Bindings
             }
         }
 
-        public static InputKey FromKey(Key key)
-        {
-            switch (key)
-            {
-                case Key.LShift: return InputKey.LShift;
-
-                case Key.RShift: return InputKey.RShift;
-
-                case Key.LControl: return InputKey.LControl;
-
-                case Key.RControl: return InputKey.RControl;
-
-                case Key.LAlt: return InputKey.LAlt;
-
-                case Key.RAlt: return InputKey.RAlt;
-
-                case Key.LWin: return InputKey.LSuper;
-
-                case Key.RWin: return InputKey.RSuper;
-            }
-
-            return (InputKey)key;
-        }
+        public static InputKey FromKey(KeyboardKey key) => InputKeyWrapper.ToInputKey(key);
 
         public static InputKey FromMouseButton(MouseButton button) => (InputKey)((int)InputKey.FirstMouseButton + button);
 
@@ -661,7 +650,7 @@ namespace osu.Framework.Input.Bindings
                 {
                     var iKey = FromKey(key);
 
-                    if (!keys.Contains(iKey))
+                    if (!keys.ContainsKey(iKey))
                         keys.Add(iKey);
                 }
             }
@@ -681,7 +670,7 @@ namespace osu.Framework.Input.Bindings
                 keys.AddRange(state.Tablet.AuxiliaryButtons.Select(FromTabletAuxiliaryButton));
             }
 
-            Debug.Assert(!keys.Contains(InputKey.None)); // Having None in pressed keys will break IsPressed
+            Debug.Assert(!keys.ContainsKey(InputKey.None)); // Having None in pressed keys will break IsPressed
             keys.Sort();
             return new KeyCombination(keys.ToImmutable());
         }

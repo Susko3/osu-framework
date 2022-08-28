@@ -29,7 +29,7 @@ namespace osu.Framework.Input
         /// <returns>The <see cref="KeyCombination"/> as a human-readable string.</returns>
         public string GetReadableString(KeyCombination c)
         {
-            var sortedKeys = c.Keys.GetValuesInOrder().ToArray();
+            var sortedKeys = c.Keys.GetValuesInOrder().ToArray(); // TODO: this requires that Keys is an enum...
 
             return string.Join('-', sortedKeys.Select(key =>
             {
@@ -64,8 +64,20 @@ namespace osu.Framework.Input
             }).Where(s => !string.IsNullOrEmpty(s)));
         }
 
+        /// <summary>
+        /// See <see cref="KeyboardKey.ToString"/>
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         protected virtual string GetReadableKey(InputKey key)
         {
+            InputKeyWrapper.Unmangle(key, out key, out char c);
+
+            if (c != '\0')
+            {
+                return $"({GetReadableKey(key)}, '{c.ToString()}')";
+            }
+
             if (key >= InputKey.FirstTabletAuxiliaryButton)
                 return $"Tablet Aux {key - InputKey.FirstTabletAuxiliaryButton + 1}";
             if (key >= InputKey.FirstTabletPenButton)

@@ -855,7 +855,8 @@ namespace osu.Framework.Input
 
         private bool handleMouseMove(InputState state, Vector2 lastPosition) => PropagateBlockableEvent(PositionalInputQueue, new MouseMoveEvent(state, lastPosition));
 
-        private bool handleScroll(InputState state, Vector2 lastScroll, bool isPrecise) => PropagateBlockableEvent(PositionalInputQueue, new ScrollEvent(state, state.Mouse.Scroll - lastScroll, isPrecise));
+        private bool handleScroll(InputState state, Vector2 lastScroll, bool isPrecise) =>
+            PropagateBlockableEvent(PositionalInputQueue, new ScrollEvent(state, state.Mouse.Scroll - lastScroll, isPrecise));
 
         /// <summary>
         /// Triggers events on drawables in <paramref name="drawables"/> until it is handled.

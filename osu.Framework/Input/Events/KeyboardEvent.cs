@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Input.States;
 using osuTK.Input;
@@ -11,9 +12,13 @@ namespace osu.Framework.Input.Events
     /// <summary>
     /// Events of a keyboard key.
     /// </summary>
-    public abstract class KeyboardEvent : UIEvent
+    public abstract class KeyboardEvent : UIEvent, IKeyChar<Key>
     {
-        public readonly Key Key;
+        public readonly KeyboardKey KeyboardKey;
+
+        public Key Key => KeyboardKey.Key;
+
+        public char Character => KeyboardKey.Character;
 
         /// <summary>
         /// Whether a specific key is pressed.
@@ -30,10 +35,15 @@ namespace osu.Framework.Input.Events
         /// </summary>
         public IEnumerable<Key> PressedKeys => CurrentState.Keyboard.Keys;
 
-        protected KeyboardEvent(InputState state, Key key)
+        /// <summary>
+        /// List of uhh
+        /// </summary>
+        public IEnumerable<char> PressedCharacters => CurrentState.Keyboard.Characters.Where(pair => IsPressed(pair.Key)).Select(pair => pair.Value);
+
+        protected KeyboardEvent(InputState state, KeyboardKey key)
             : base(state)
         {
-            Key = key;
+            KeyboardKey = key;
         }
 
         public override string ToString() => $"{GetType().ReadableName()}({Key})";

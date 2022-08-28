@@ -2,11 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
+using osu.Framework.Logging;
 using osuTK.Input;
 using SDL2;
 
@@ -14,6 +17,12 @@ namespace osu.Framework.Platform.SDL2
 {
     public static class SDL2Extensions
     {
+        /// <summary>
+        /// Whether this <paramref name="keycode"/> has the <see cref="SDL.SDLK_SCANCODE_MASK"/> bit set.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool HasScancodeMask(this SDL.SDL_Keycode keycode) => keycode.HasFlagFast((SDL.SDL_Keycode)SDL.SDLK_SCANCODE_MASK);
+
         public static Key ToKey(this SDL.SDL_Keysym sdlKeysym)
         {
             // Apple devices don't have the notion of NumLock (they have a Clear key instead).
@@ -24,6 +33,7 @@ namespace osu.Framework.Platform.SDL2
             {
                 default:
                 case SDL.SDL_Scancode.SDL_SCANCODE_UNKNOWN:
+                    Logger.Log($"Unknown SDL key: {sdlKeysym.scancode}, {sdlKeysym.sym}, unicode: {sdlKeysym.unicode}");
                     return Key.Unknown;
 
                 case SDL.SDL_Scancode.SDL_SCANCODE_KP_COMMA:
@@ -446,6 +456,133 @@ namespace osu.Framework.Platform.SDL2
                 case SDL.SDL_Scancode.SDL_SCANCODE_SLEEP:
                     return Key.Sleep;
             }
+        }
+
+        public static char GetKeyCharacter(this SDL.SDL_Keysym sdlKeysym, Key resolvedKey)
+        {
+            var keycode = sdlKeysym.sym;
+
+            // keys that are ascii control codes.
+            switch (keycode)
+            {
+                case SDL.SDL_Keycode.SDLK_UNKNOWN:
+                case SDL.SDL_Keycode.SDLK_ESCAPE:
+                case SDL.SDL_Keycode.SDLK_BACKSPACE:
+                case SDL.SDL_Keycode.SDLK_DELETE:
+                    return '\0';
+
+                case SDL.SDL_Keycode.SDLK_RETURN:
+                    return '\n';
+
+                case SDL.SDL_Keycode.SDLK_TAB:
+                    return '\t';
+
+                case SDL.SDL_Keycode.SDLK_SPACE:
+                    return ' ';
+            }
+
+            if (keycode <= SDL.SDL_Keycode.SDLK_z)
+            {
+                // keycode represents an ascii character (always lower-case).
+                // Logger.Log($"name from keycode ascii!!! {(char)keycode}");
+                return (char)keycode;
+            }
+
+            if (!keycode.HasFlagFast((SDL.SDL_Keycode)SDL.SDLK_SCANCODE_MASK))
+            {
+                // this key is encoded as a UCS4 (UTF-32) unicode character.
+                // it's name is it's character.
+                string name = SDL.SDL_GetKeyName(keycode);
+
+                switch (name.Length)
+                {
+                    default:
+                        // if length == 0, something has gone terribly wrong on SDL's end.
+                        // > 2 shouldn't be possible in UTF-16.
+                        return '\0';
+
+                    case 1:
+                        // we have one basic multilingual plane (Unicode BMP) character we can easily handle.
+                        // Logger.Log($"got name from sdl key name: {name}");
+                        return name[0];
+
+                    case 2:
+                        // we have a UTF-16 surrogate pair. ignore for now as we can't handle that.
+                        // return the ascii character on the en_US keyboard layout for this physical key.
+                        return resolvedKey.GetCharacter();
+                }
+            }
+
+            // key is a scancode
+            switch (keycode)
+            {
+                case SDL.SDL_Keycode.SDLK_KP_DIVIDE:
+                    return '/';
+
+                case SDL.SDL_Keycode.SDLK_KP_MULTIPLY:
+                    return '*';
+
+                case SDL.SDL_Keycode.SDLK_KP_MINUS:
+                    return '-';
+
+                case SDL.SDL_Keycode.SDLK_KP_PLUS:
+                    return '+';
+
+                case SDL.SDL_Keycode.SDLK_KP_ENTER:
+                    return '\n';
+
+                case SDL.SDL_Keycode.SDLK_KP_1:
+                    return '1';
+
+                case SDL.SDL_Keycode.SDLK_KP_2:
+                    return '2';
+
+                case SDL.SDL_Keycode.SDLK_KP_3:
+                    return '3';
+
+                case SDL.SDL_Keycode.SDLK_KP_4:
+                    return '4';
+
+                case SDL.SDL_Keycode.SDLK_KP_5:
+                    return '5';
+
+                case SDL.SDL_Keycode.SDLK_KP_6:
+                    return '6';
+
+                case SDL.SDL_Keycode.SDLK_KP_7:
+                    return '7';
+
+                case SDL.SDL_Keycode.SDLK_KP_8:
+                    return '8';
+
+                case SDL.SDL_Keycode.SDLK_KP_9:
+                    return '9';
+
+                case SDL.SDL_Keycode.SDLK_KP_0:
+                    return '0';
+
+                case SDL.SDL_Keycode.SDLK_KP_PERIOD:
+                    // potentially return ',' as decimal separator based on keyboard layout.
+                    return '.';
+
+                case SDL.SDL_Keycode.SDLK_KP_COMMA:
+                    // this keycode isn't sent for a keyboard that has a comma as a decimal separator.
+                    // handle it anyway for prosperity.
+                    return ',';
+
+                // there are a lot of SDLK_KP_ keys that don't really exits on regular keyboards.
+                // can be added if/when the rest of framework supports those extra keys.
+
+                default:
+                    return '\0';
+            }
+        }
+
+        public static KeyboardKey ToKeyboardKey(this SDL.SDL_Keysym sdlKeysym)
+        {
+            var key = sdlKeysym.ToKey();
+            char c = sdlKeysym.GetKeyCharacter(key);
+            return new KeyboardKey(key, c);
         }
 
         /// <summary>

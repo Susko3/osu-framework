@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Input.States;
-using osuTK.Input;
 
 namespace osu.Framework.Input.Events
 {
@@ -11,7 +10,7 @@ namespace osu.Framework.Input.Events
     /// </summary>
     public class KeyUpEvent : KeyboardEvent
     {
-        public KeyUpEvent(InputState state, Key key)
+        public KeyUpEvent(InputState state, KeyboardKey key)
             : base(state, key)
         {
         }
