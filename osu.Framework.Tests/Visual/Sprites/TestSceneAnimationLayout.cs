@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
@@ -135,7 +137,7 @@ namespace osu.Framework.Tests.Visual.Sprites
             private void load()
             {
                 for (int i = 0; i <= 9; i++)
-                    AddFrame(new Texture(fontStore.Get(null, i.ToString()[0])?.Texture.TextureGL) { ScaleAdjust = 1 + i / 2 }, 1000.0 / 60 * 6);
+                    AddFrame(new Texture(fontStore.Get(null, i.ToString()[0])?.Texture) { ScaleAdjust = 1 + i / 2 }, 1000.0 / 60 * 6);
             }
         }
     }

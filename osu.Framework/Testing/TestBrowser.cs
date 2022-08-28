@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -246,7 +248,7 @@ namespace osu.Framework.Testing
                 toolbar.AddAssembly(asm.GetName().Name, asm);
 
             Assembly.BindValueChanged(updateList);
-            RunAllSteps.BindValueChanged(v => runTests(null));
+            RunAllSteps.BindValueChanged(_ => runTests(null));
             PlaybackRate.BindValueChanged(e =>
             {
                 rateAdjustClock.Rate = e.NewValue;
@@ -394,8 +396,12 @@ namespace osu.Framework.Testing
         {
             if (CurrentTest != newTest)
             {
-                // There could have been multiple loads fired after us. In such a case we want to silently remove ourselves.
-                testContentContainer.Remove(newTest.Parent);
+                if (newTest.Parent != null)
+                {
+                    // There could have been multiple loads fired after us. In such a case we want to silently remove ourselves.
+                    testContentContainer.Remove(newTest.Parent);
+                }
+
                 return;
             }
 

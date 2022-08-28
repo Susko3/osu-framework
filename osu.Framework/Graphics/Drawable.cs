@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osuTK;
 using osuTK.Graphics;
 using osu.Framework.Allocation;
@@ -28,7 +30,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Development;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics.Cursor;
-using osu.Framework.Graphics.OpenGL;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.States;
@@ -56,6 +58,9 @@ namespace osu.Framework.Graphics
     public abstract partial class Drawable : Transformable, IDisposable, IDrawable
     {
         #region Construction and disposal
+
+        [Resolved(CanBeNull = true)]
+        private IRenderer renderer { get; set; }
 
         protected Drawable()
         {
@@ -105,8 +110,11 @@ namespace osu.Framework.Graphics
             OnDispose?.Invoke();
             OnDispose = null;
 
-            for (int i = 0; i < drawNodes.Length; i++)
-                drawNodes[i]?.Dispose();
+            renderer?.ScheduleDisposal(d =>
+            {
+                for (int i = 0; i < d.drawNodes.Length; i++)
+                    d.drawNodes[i]?.Dispose();
+            }, this);
 
             IsDisposed = true;
         }
@@ -1082,7 +1090,7 @@ namespace osu.Framework.Graphics
         /// <summary>
         /// The origin of this <see cref="Drawable"/>.
         /// </summary>
-        /// <exception cref="ArgumentException">If the provided value does not exist in the <see cref="osu.Framework.Graphics.Anchor"/> enumeration.</exception>
+        /// <exception cref="ArgumentException">If the provided value does not exist in the <see cref="Graphics.Anchor"/> enumeration.</exception>
         public virtual Anchor Origin
         {
             get => origin;
@@ -1838,7 +1846,7 @@ namespace osu.Framework.Graphics
 
         #region DrawNode
 
-        private readonly DrawNode[] drawNodes = new DrawNode[GLWrapper.MAX_DRAW_NODES];
+        private readonly DrawNode[] drawNodes = new DrawNode[IRenderer.MAX_DRAW_NODES];
 
         /// <summary>
         /// Generates the <see cref="DrawNode"/> for ourselves.
@@ -2343,7 +2351,7 @@ namespace osu.Framework.Graphics
         public virtual bool HandlePositionalInput => RequestsPositionalInput;
 
         /// <summary>
-        /// Nested class which is used for caching <see cref="Drawable.HandleNonPositionalInput"/>, <see cref="Drawable.HandlePositionalInput"/> values obtained via reflection.
+        /// Nested class which is used for caching <see cref="HandleNonPositionalInput"/>, <see cref="HandlePositionalInput"/> values obtained via reflection.
         /// </summary>
         private static class HandleInputCache
         {

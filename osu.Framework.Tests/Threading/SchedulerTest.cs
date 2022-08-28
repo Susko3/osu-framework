@@ -13,7 +13,7 @@ namespace osu.Framework.Tests.Threading
     [TestFixture]
     public class SchedulerTest
     {
-        private Scheduler scheduler;
+        private Scheduler scheduler = null!;
 
         private bool fromMainThread;
 
@@ -263,7 +263,7 @@ namespace osu.Framework.Tests.Threading
 
             int invocations = 0;
 
-            ScheduledDelegate del = null;
+            ScheduledDelegate? del = null;
 
             scheduler.Add(del = new ScheduledDelegate(() =>
             {

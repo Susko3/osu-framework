@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -183,7 +185,10 @@ namespace osu.Framework.Audio
                         {
                         }
                     }
-                }) { IsBackground = true }.Start();
+                })
+                {
+                    IsBackground = true
+                }.Start();
             });
         }
 
@@ -225,7 +230,8 @@ namespace osu.Framework.Audio
         /// Channels removed from this <see cref="AudioMixer"/> fall back to the global <see cref="SampleMixer"/>.
         /// </remarks>
         /// <param name="identifier">An identifier displayed on the audio mixer visualiser.</param>
-        public AudioMixer CreateAudioMixer(string identifier = default) => createAudioMixer(SampleMixer, !string.IsNullOrEmpty(identifier) ? identifier : $"user #{Interlocked.Increment(ref userMixerID)}");
+        public AudioMixer CreateAudioMixer(string identifier = default) =>
+            createAudioMixer(SampleMixer, !string.IsNullOrEmpty(identifier) ? identifier : $"user #{Interlocked.Increment(ref userMixerID)}");
 
         private AudioMixer createAudioMixer(AudioMixer globalMixer, string identifier)
         {

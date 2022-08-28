@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using FFmpeg.AutoGen;
 using osuTK;
 using osu.Framework.Graphics.Textures;
@@ -17,8 +19,10 @@ using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.EnumExtensions;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Platform.Linux.Native;
 using AGffmpeg = FFmpeg.AutoGen.ffmpeg;
 
 namespace osu.Framework.Graphics.Video
@@ -93,6 +97,8 @@ namespace osu.Framework.Graphics.Video
 
         private double? skipOutputUntilTime;
 
+        private readonly IRenderer renderer;
+
         private readonly ConcurrentQueue<DecodedFrame> decodedFrames;
         private readonly ConcurrentQueue<Action> decoderCommands;
 
@@ -104,23 +110,40 @@ namespace osu.Framework.Graphics.Video
 
         internal bool Looping;
 
+        static VideoDecoder()
+        {
+            if (RuntimeInfo.OS == RuntimeInfo.Platform.Linux)
+            {
+                // FFmpeg.AutoGen doesn't load libraries as RTLD_GLOBAL, so we must load them ourselves to fix inter-library dependencies
+                // otherwise they would fallback to the system-installed libraries that can differ in version installed.
+                Library.Load("libavutil.so", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+                Library.Load("libavcodec.so", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+                Library.Load("libavformat.so", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+                Library.Load("libavfilter.so", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+                Library.Load("libswscale.so", Library.LoadFlags.RTLD_LAZY | Library.LoadFlags.RTLD_GLOBAL);
+            }
+        }
+
         /// <summary>
         /// Creates a new video decoder that decodes the given video file.
         /// </summary>
+        /// <param name="renderer">The renderer to display the video.</param>
         /// <param name="filename">The path to the file that should be decoded.</param>
-        public VideoDecoder(string filename)
-            : this(File.OpenRead(filename))
+        public VideoDecoder(IRenderer renderer, string filename)
+            : this(renderer, File.OpenRead(filename))
         {
         }
 
         /// <summary>
         /// Creates a new video decoder that decodes the given video stream.
         /// </summary>
+        /// <param name="renderer">The renderer to display the video.</param>
         /// <param name="videoStream">The stream that should be decoded.</param>
-        public VideoDecoder(Stream videoStream)
+        public VideoDecoder(IRenderer renderer, Stream videoStream)
         {
             ffmpeg = CreateFuncs();
 
+            this.renderer = renderer;
             this.videoStream = videoStream;
             if (!videoStream.CanRead)
                 throw new InvalidOperationException($"The given stream does not support reading. A stream used for a {nameof(VideoDecoder)} must support reading.");
@@ -131,7 +154,7 @@ namespace osu.Framework.Graphics.Video
             availableTextures = new ConcurrentQueue<Texture>(); // TODO: use "real" object pool when there's some public pool supporting disposables
             handle = new ObjectHandle<VideoDecoder>(this, GCHandleType.Normal);
 
-            TargetHardwareVideoDecoders.BindValueChanged(e =>
+            TargetHardwareVideoDecoders.BindValueChanged(_ =>
             {
                 // ignore if decoding wasn't initialized yet.
                 if (formatContext == null)
@@ -167,7 +190,7 @@ namespace osu.Framework.Graphics.Video
         {
             foreach (var f in frames)
             {
-                ((VideoTexture)f.Texture.TextureGL).FlushUploads();
+                f.Texture.FlushUploads();
                 availableTextures.Enqueue(f.Texture);
             }
         }
@@ -617,11 +640,12 @@ namespace osu.Framework.Graphics.Video
                     continue;
 
                 if (!availableTextures.TryDequeue(out var tex))
-                    tex = new Texture(new VideoTexture(frame.Pointer->width, frame.Pointer->height));
+                    tex = renderer.CreateVideoTexture(frame.Pointer->width, frame.Pointer->height);
 
                 var upload = new VideoTextureUpload(frame);
 
-                tex.SetData(upload);
+                // We do not support videos with transparency at this point, so the upload's opacity as well as the texture's opacity is always opaque.
+                tex.SetData(upload, Opacity.Opaque);
                 decodedFrames.Enqueue(new DecodedFrame { Time = frameTime, Texture = tex });
             }
         }
@@ -780,7 +804,7 @@ namespace osu.Framework.Graphics.Video
         protected virtual FFmpegFuncs CreateFuncs()
         {
             // other frameworks should handle native libraries themselves
-#if NET6_0
+#if NET6_0_OR_GREATER
             AGffmpeg.GetOrLoadLibrary = name =>
             {
                 int version = AGffmpeg.LibraryVersionMap[name];
@@ -895,7 +919,7 @@ namespace osu.Framework.Graphics.Video
 
                 while (decodedFrames.TryDequeue(out var f))
                 {
-                    ((VideoTexture)f.Texture.TextureGL).FlushUploads();
+                    f.Texture.FlushUploads();
                     f.Texture.Dispose();
                 }
 

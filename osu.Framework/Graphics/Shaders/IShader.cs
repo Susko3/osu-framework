@@ -5,7 +5,7 @@ using System;
 
 namespace osu.Framework.Graphics.Shaders
 {
-    public interface IShader
+    public interface IShader : IDisposable
     {
         /// <summary>
         /// Binds this shader to be used for rendering.
@@ -21,6 +21,11 @@ namespace osu.Framework.Graphics.Shaders
         /// Whether this shader is ready for use.
         /// </summary>
         bool IsLoaded { get; }
+
+        /// <summary>
+        /// Whether this shader is currently bound.
+        /// </summary>
+        bool IsBound { get; }
 
         /// <summary>
         /// Retrieves a uniform from the shader.

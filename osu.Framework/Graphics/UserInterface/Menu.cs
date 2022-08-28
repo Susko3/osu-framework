@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -429,7 +431,7 @@ namespace osu.Framework.Graphics.UserInterface
 
                 positionLayout.Validate();
 
-                Anchor switchAxisAnchors(Anchor originalValue, Anchor toDisable, Anchor toEnable) => (originalValue & ~toDisable) | toEnable;
+                static Anchor switchAxisAnchors(Anchor originalValue, Anchor toDisable, Anchor toEnable) => (originalValue & ~toDisable) | toEnable;
             }
         }
 
@@ -591,6 +593,7 @@ namespace osu.Framework.Graphics.UserInterface
             return base.OnKeyDown(e);
         }
 
+        protected override bool OnMouseDown(MouseDownEvent e) => true;
         protected override bool OnClick(ClickEvent e) => true;
         protected override bool OnHover(HoverEvent e) => true;
 

@@ -1,8 +1,11 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 
 namespace osu.Framework.Platform
@@ -99,12 +102,36 @@ namespace osu.Framework.Platform
         }
 
         /// <summary>
+        /// Move a file from one location to another. File must exist. Destination must not exist.
+        /// </summary>
+        /// <param name="from">The file path to move.</param>
+        /// <param name="to">The destination path.</param>
+        public abstract void Move(string from, string to);
+
+        /// <summary>
+        /// Create a new file on disk, using a temporary file to write to before moving to the final location to ensure a half-written file cannot exist at the specified location.
+        /// </summary>
+        /// <remarks>
+        /// If the target file path already exists, it will be deleted before attempting to write a new version.
+        /// </remarks>
+        /// <param name="path">The path of the file to create or overwrite.</param>
+        /// <returns>A stream associated with the requested path. Will only exist at the specified location after the stream is disposed.</returns>
+        [Pure]
+        public Stream CreateFileSafely(string path)
+        {
+            string temporaryPath = Path.Combine(Path.GetDirectoryName(path), $"_{Path.GetFileName(path)}_{Guid.NewGuid()}");
+
+            return new SafeWriteStream(temporaryPath, path, this);
+        }
+
+        /// <summary>
         /// Retrieve a stream from an underlying file inside this storage.
         /// </summary>
         /// <param name="path">The path of the file.</param>
         /// <param name="access">The access requirements.</param>
         /// <param name="mode">The mode in which the file should be opened.</param>
         /// <returns>A stream associated with the requested path.</returns>
+        [Pure]
         public abstract Stream GetStream(string path, FileAccess access = FileAccess.Read, FileMode mode = FileMode.OpenOrCreate);
 
         /// <summary>
@@ -129,5 +156,59 @@ namespace osu.Framework.Platform
         /// <param name="filename">Relative path to the file.</param>
         /// <returns>Whether the file was successfully presented.</returns>
         public abstract bool PresentFileExternally(string filename);
+
+        /// <summary>
+        /// Uses a temporary file to ensure a file is written to completion before existing at its specified location.
+        /// </summary>
+        private class SafeWriteStream : FileStream
+        {
+            private readonly string temporaryPath;
+            private readonly string finalPath;
+            private readonly Storage storage;
+
+            public SafeWriteStream(string temporaryPath, string finalPath, Storage storage)
+                : base(storage.GetFullPath(temporaryPath, true), FileMode.Create, FileAccess.Write)
+            {
+                this.temporaryPath = temporaryPath;
+                this.finalPath = finalPath;
+                this.storage = storage;
+            }
+
+            private bool isDisposed;
+
+            protected override void Dispose(bool disposing)
+            {
+                if (!isDisposed)
+                {
+                    // this was added to work around some hardware writing zeroes to a file
+                    // before writing actual content, causing corrupt files to exist on disk.
+                    // as of .NET 6, flushing is very expensive on macOS so this is limited to only Windows,
+                    // but it may also be entirely unnecessary due to the temporary file copying performed on this class.
+                    // see: https://github.com/ppy/osu-framework/issues/5231
+                    if (RuntimeInfo.OS == RuntimeInfo.Platform.Windows)
+                    {
+                        try
+                        {
+                            Flush(true);
+                        }
+                        catch
+                        {
+                            // this may fail due to a lower level file access issue.
+                            // we don't want to throw in disposal though.
+                        }
+                    }
+                }
+
+                base.Dispose(disposing);
+
+                if (!isDisposed)
+                {
+                    storage.Delete(finalPath);
+                    storage.Move(temporaryPath, finalPath);
+
+                    isDisposed = true;
+                }
+            }
+        }
     }
 }

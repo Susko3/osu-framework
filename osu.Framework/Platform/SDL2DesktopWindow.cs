@@ -1,8 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -13,6 +16,8 @@ using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Extensions.ImageExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input;
+using osu.Framework.Input.States;
+using osu.Framework.Logging;
 using osu.Framework.Platform.SDL2;
 using osu.Framework.Platform.Windows.Native;
 using osu.Framework.Threading;
@@ -137,6 +142,22 @@ namespace osu.Framework.Platform
             }
         }
 
+        /// <summary>
+        /// Controls whether the mouse is automatically captured when buttons are pressed and the cursor is outside the window.
+        /// Only works with <see cref="RelativeMouseMode"/> disabled.
+        /// </summary>
+        /// <remarks>
+        /// If the cursor leaves the window while it's captured, <see cref="SDL.SDL_WindowEventID.SDL_WINDOWEVENT_LEAVE"/> is not sent until the button(s) are released.
+        /// And if the cursor leaves and enters the window while captured, <see cref="SDL.SDL_WindowEventID.SDL_WINDOWEVENT_ENTER"/> is not sent either.
+        /// We disable relative mode when the cursor exits window bounds (not on the event), but we only enable it again on <see cref="SDL.SDL_WindowEventID.SDL_WINDOWEVENT_ENTER"/>.
+        /// The above culminate in <see cref="RelativeMouseMode"/> staying off when the cursor leaves and enters the window bounds when any buttons are pressed.
+        /// This is an invalid state, as the cursor is inside the window, and <see cref="RelativeMouseMode"/> is off.
+        /// </remarks>
+        internal bool MouseAutoCapture
+        {
+            set => ScheduleCommand(() => SDL.SDL_SetHint(SDL.SDL_HINT_MOUSE_AUTO_CAPTURE, value ? "1" : "0"));
+        }
+
         private Size size = new Size(default_width, default_height);
 
         /// <summary>
@@ -152,6 +173,18 @@ namespace osu.Framework.Platform
                 size = value;
                 Resized?.Invoke();
             }
+        }
+
+        public Size MinSize
+        {
+            get => sizeWindowed.MinValue;
+            set => sizeWindowed.MinValue = value;
+        }
+
+        public Size MaxSize
+        {
+            get => sizeWindowed.MaxValue;
+            set => sizeWindowed.MaxValue = value;
         }
 
         /// <summary>
@@ -202,8 +235,15 @@ namespace osu.Framework.Platform
 
         private const int default_icon_size = 256;
 
+        /// <summary>
+        /// Scheduler for actions to run before the next event loop.
+        /// </summary>
         private readonly Scheduler commandScheduler = new Scheduler();
-        private readonly Scheduler eventScheduler = new Scheduler();
+
+        /// <summary>
+        /// Scheduler for actions to run at the end of the current event loop.
+        /// </summary>
+        protected readonly Scheduler EventScheduler = new Scheduler();
 
         private readonly Dictionary<int, SDL2ControllerBindings> controllers = new Dictionary<int, SDL2ControllerBindings>();
 
@@ -399,9 +439,29 @@ namespace osu.Framework.Platform
         private readonly BindableDouble windowPositionY = new BindableDouble();
         private readonly Bindable<DisplayIndex> windowDisplayIndexBindable = new Bindable<DisplayIndex>();
 
+        // references must be kept to avoid GC, see https://stackoverflow.com/a/6193914
+
+        [UsedImplicitly]
+        private SDL.SDL_LogOutputFunction logOutputDelegate;
+
+        [UsedImplicitly]
+        private SDL.SDL_EventFilter eventFilterDelegate;
+
         public SDL2DesktopWindow()
         {
-            SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_GAMECONTROLLER);
+            if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_GAMECONTROLLER) < 0)
+            {
+                throw new InvalidOperationException($"Failed to initialise SDL: {SDL.SDL_GetError()}");
+            }
+
+            SDL.SDL_LogSetPriority((int)SDL.SDL_LogCategory.SDL_LOG_CATEGORY_ERROR, SDL.SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG);
+            SDL.SDL_LogSetOutputFunction(logOutputDelegate = (_, categoryInt, priority, messagePtr) =>
+            {
+                var category = (SDL.SDL_LogCategory)categoryInt;
+                string message = Marshal.PtrToStringUTF8(messagePtr);
+
+                Logger.Log($@"SDL {category.ReadableName()} log [{priority.ReadableName()}]: {message}");
+            }, IntPtr.Zero);
 
             graphicsBackend = CreateGraphicsBackend();
 
@@ -430,12 +490,15 @@ namespace osu.Framework.Platform
             SDL.SDL_SetHint(SDL.SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "1");
             SDL.SDL_SetHint(SDL.SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "1");
             SDL.SDL_SetHint(SDL.SDL_HINT_IME_SHOW_UI, "1");
+            SDL.SDL_SetHint(SDL.SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "0");
+            SDL.SDL_SetHint(SDL.SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
             // we want text input to only be active when SDL2DesktopWindowTextInput is active.
             // SDL activates it by default on some platforms: https://github.com/libsdl-org/SDL/blob/release-2.0.16/src/video/SDL_video.c#L573-L582
             // so we deactivate it on startup.
             SDL.SDL_StopTextInput();
 
+            graphicsBackend.InitialiseBeforeWindowCreation();
             SDLWindowHandle = SDL.SDL_CreateWindow(title, Position.X, Position.Y, Size.Width, Size.Height, flags);
 
             Exists = true;
@@ -444,12 +507,33 @@ namespace osu.Framework.Platform
 
             updateWindowSpecifics();
             updateWindowSize();
+
+            sizeWindowed.MinValueChanged += min =>
+            {
+                if (min.Width < 0 || min.Height < 0)
+                    throw new InvalidOperationException($"Expected zero or positive size, got {min}");
+
+                if (min.Width > sizeWindowed.MaxValue.Width || min.Height > sizeWindowed.MaxValue.Height)
+                    throw new InvalidOperationException($"Expected a size less than max window size ({sizeWindowed.MaxValue}), got {min}");
+
+                ScheduleCommand(() => SDL.SDL_SetWindowMinimumSize(SDLWindowHandle, min.Width, min.Height));
+            };
+
+            sizeWindowed.MaxValueChanged += max =>
+            {
+                if (max.Width <= 0 || max.Height <= 0)
+                    throw new InvalidOperationException($"Expected positive size, got {max}");
+
+                if (max.Width < sizeWindowed.MinValue.Width || max.Height < sizeWindowed.MinValue.Height)
+                    throw new InvalidOperationException($"Expected a size greater than min window size ({sizeWindowed.MinValue}), got {max}");
+
+                ScheduleCommand(() => SDL.SDL_SetWindowMaximumSize(SDLWindowHandle, max.Width, max.Height));
+            };
+
+            sizeWindowed.TriggerChange();
+
             WindowMode.TriggerChange();
         }
-
-        // reference must be kept to avoid GC, see https://stackoverflow.com/a/6193914
-        [UsedImplicitly]
-        private SDL.SDL_EventFilter eventFilterDelegate;
 
         /// <summary>
         /// Starts the window's run loop.
@@ -488,7 +572,7 @@ namespace osu.Framework.Platform
                 if (!cursorInWindow.Value)
                     pollMouse();
 
-                eventScheduler.Update();
+                EventScheduler.Update();
 
                 Update?.Invoke();
             }
@@ -510,27 +594,23 @@ namespace osu.Framework.Platform
             SDL.SDL_GL_GetDrawableSize(SDLWindowHandle, out int w, out int h);
             SDL.SDL_GetWindowSize(SDLWindowHandle, out int actualW, out int _);
 
+            // When minimised on windows, values may be zero.
+            // If we receive zeroes for either of these, it seems safe to completely ignore them.
+            if (actualW <= 0 || w <= 0)
+                return;
+
             Scale = (float)w / actualW;
             Size = new Size(w, h);
 
             // This function may be invoked before the SDL internal states are all changed. (as documented here: https://wiki.libsdl.org/SDL_SetEventFilter)
             // Scheduling the store to config until after the event poll has run will ensure the window is in the correct state.
-            eventScheduler.AddOnce(storeWindowSizeToConfig);
+            EventScheduler.AddOnce(storeWindowSizeToConfig);
         }
 
         /// <summary>
         /// Forcefully closes the window.
         /// </summary>
         public void Close() => ScheduleCommand(() => Exists = false);
-
-        /// <summary>
-        /// Attempts to close the window.
-        /// </summary>
-        public void RequestClose() => ScheduleEvent(() =>
-        {
-            if (ExitRequested?.Invoke() != true)
-                Close();
-        });
 
         public void SwapBuffers()
         {
@@ -558,7 +638,7 @@ namespace osu.Framework.Platform
         {
             // SDL reports axis values in the range short.MinValue to short.MaxValue, so we scale and clamp it to the range of -1f to 1f
             float clamped = Math.Clamp((float)axisValue / short.MaxValue, -1f, 1f);
-            JoystickAxisChanged?.Invoke(new JoystickAxis(axisSource, clamped));
+            JoystickAxisChanged?.Invoke(axisSource, clamped);
         }
 
         private void enqueueJoystickButtonInput(JoystickButton button, bool isPressed)
@@ -634,7 +714,7 @@ namespace osu.Framework.Platform
         /// Adds an <see cref="Action"/> to the <see cref="Scheduler"/> expected to handle event callbacks.
         /// </summary>
         /// <param name="action">The <see cref="Action"/> to execute.</param>
-        protected void ScheduleEvent(Action action) => eventScheduler.Add(action, false);
+        protected void ScheduleEvent(Action action) => EventScheduler.Add(action, false);
 
         protected void ScheduleCommand(Action action) => commandScheduler.Add(action, false);
 
@@ -753,7 +833,7 @@ namespace osu.Framework.Platform
             }
         }
 
-        private void handleQuitEvent(SDL.SDL_QuitEvent evtQuit) => RequestClose();
+        private void handleQuitEvent(SDL.SDL_QuitEvent evtQuit) => ExitRequested?.Invoke();
 
         private void handleDropEvent(SDL.SDL_DropEvent evtDrop)
         {
@@ -768,8 +848,65 @@ namespace osu.Framework.Platform
             }
         }
 
+        private readonly long?[] activeTouches = new long?[TouchState.MAX_TOUCH_COUNT];
+
+        private TouchSource? getTouchSource(long fingerId)
+        {
+            for (int i = 0; i < activeTouches.Length; i++)
+            {
+                if (fingerId == activeTouches[i])
+                    return (TouchSource)i;
+            }
+
+            return null;
+        }
+
+        private TouchSource? assignNextAvailableTouchSource(long fingerId)
+        {
+            for (int i = 0; i < activeTouches.Length; i++)
+            {
+                if (activeTouches[i] != null) continue;
+
+                activeTouches[i] = fingerId;
+                return (TouchSource)i;
+            }
+
+            // we only handle up to TouchState.MAX_TOUCH_COUNT. Ignore any further touches for now.
+            return null;
+        }
+
         private void handleTouchFingerEvent(SDL.SDL_TouchFingerEvent evtTfinger)
         {
+            var eventType = (SDL.SDL_EventType)evtTfinger.type;
+
+            var existingSource = getTouchSource(evtTfinger.fingerId);
+
+            if (eventType == SDL.SDL_EventType.SDL_FINGERDOWN)
+            {
+                Debug.Assert(existingSource == null);
+                existingSource = assignNextAvailableTouchSource(evtTfinger.fingerId);
+            }
+
+            if (existingSource == null)
+                return;
+
+            float x = evtTfinger.x * Size.Width;
+            float y = evtTfinger.y * Size.Height;
+
+            var touch = new Touch(existingSource.Value, new Vector2(x, y));
+
+            switch (eventType)
+            {
+                case SDL.SDL_EventType.SDL_FINGERDOWN:
+                case SDL.SDL_EventType.SDL_FINGERMOTION:
+                    TouchDown?.Invoke(touch);
+                    break;
+
+                case SDL.SDL_EventType.SDL_FINGERUP:
+                    TouchUp?.Invoke(touch);
+                    activeTouches[(int)existingSource] = null;
+                    break;
+            }
         }
 
         private void handleControllerDeviceEvent(SDL.SDL_ControllerDeviceEvent evtCdevice)
@@ -896,8 +1033,22 @@ namespace osu.Framework.Platform
             enqueueJoystickAxisInput(JoystickAxisSource.Axis1 + evtJaxis.axis, evtJaxis.axisValue);
         }
 
-        private void handleMouseWheelEvent(SDL.SDL_MouseWheelEvent evtWheel) =>
-            TriggerMouseWheel(new Vector2(evtWheel.x, evtWheel.y), false);
+        private uint lastPreciseScroll;
+
+        private const uint precise_scroll_debounce = 100;
+
+        private void handleMouseWheelEvent(SDL.SDL_MouseWheelEvent evtWheel)
+        {
+            bool isPrecise(float f) => f % 1 != 0;
+
+            if (isPrecise(evtWheel.preciseX) || isPrecise(evtWheel.preciseY))
+                lastPreciseScroll = evtWheel.timestamp;
+
+            bool precise = evtWheel.timestamp < lastPreciseScroll + precise_scroll_debounce;
+
+            // SDL reports horizontal scroll opposite of what framework expects (in non-"natural" mode, scrolling to the right gives positive deltas while we want negative).
+            TriggerMouseWheel(new Vector2(-evtWheel.preciseX, evtWheel.preciseY), precise);
+        }
 
         private void handleMouseButtonEvent(SDL.SDL_MouseButtonEvent evtButton)
         {
@@ -944,7 +1095,10 @@ namespace osu.Framework.Platform
             var key = evtKey.keysym.ToKeyboardKey();
 
             if (key.Key == Key.Unknown)
+            {
+                Logger.Log($"Unknown SDL key: {evtKey.keysym.scancode}, {evtKey.keysym.sym}");
                 return;
+            }
 
             switch (evtKey.type)
             {
@@ -1102,8 +1256,54 @@ namespace osu.Framework.Platform
 
             updateMaximisedState();
 
-            if (SDL.SDL_GetWindowDisplayMode(SDLWindowHandle, out var mode) >= 0)
-                currentDisplayMode.Value = new DisplayMode(mode.format.ToString(), new Size(mode.w, mode.h), 32, mode.refresh_rate, displayIndex, displayIndex);
+            switch (windowState)
+            {
+                case WindowState.Fullscreen:
+                    if (!updateDisplayMode(true))
+                        updateDisplayMode(false);
+                    break;
+
+                default:
+                    if (!updateDisplayMode(false))
+                        updateDisplayMode(true);
+                    break;
+            }
+
+            bool updateDisplayMode(bool queryFullscreenMode)
+            {
+                // TODO: displayIndex should be valid here at all times.
+                // on startup, the displayIndex will be invalid (-1) due to it being set later in the startup sequence.
+                // related to order of operations in `updateWindowSpecifics()`.
+                int localIndex = SDL.SDL_GetWindowDisplayIndex(SDLWindowHandle);
+
+                if (localIndex != displayIndex)
+                    Logger.Log($"Stored display index ({displayIndex}) doesn't match current index ({localIndex})");
+
+                if (queryFullscreenMode)
+                {
+                    if (SDL.SDL_GetWindowDisplayMode(SDLWindowHandle, out var mode) >= 0)
+                    {
+                        currentDisplayMode.Value = mode.ToDisplayMode(localIndex);
+                        Logger.Log($"Updated display mode to fullscreen resolution: {mode.w}x{mode.h}@{mode.refresh_rate}, {currentDisplayMode.Value.Format}");
+                        return true;
+                    }
+
+                    Logger.Log($"Failed to get fullscreen display mode. Display index: {localIndex}. SDL error: {SDL.SDL_GetError()}", level: LogLevel.Error);
+                    return false;
+                }
+                else
+                {
+                    if (SDL.SDL_GetCurrentDisplayMode(localIndex, out var mode) >= 0)
+                    {
+                        currentDisplayMode.Value = mode.ToDisplayMode(localIndex);
+                        Logger.Log($"Updated display mode to desktop resolution: {mode.w}x{mode.h}@{mode.refresh_rate}, {currentDisplayMode.Value.Format}");
+                        return true;
+                    }
+
+                    Logger.Log($"Failed to get desktop display mode. Display index: {localIndex}. SDL error: {SDL.SDL_GetError()}", level: LogLevel.Error);
+                    return false;
+                }
+            }
         }
 
         private void updateMaximisedState()
@@ -1373,18 +1573,12 @@ namespace osu.Framework.Platform
                                          .Select(modeIndex =>
                                          {
                                              SDL.SDL_GetDisplayMode(displayIndex, modeIndex, out var mode);
-                                             return displayModeFromSDL(mode, displayIndex, modeIndex);
+                                             return mode.ToDisplayMode(displayIndex);
                                          })
                                          .ToArray();
 
             SDL.SDL_GetDisplayBounds(displayIndex, out var rect);
             return new Display(displayIndex, SDL.SDL_GetDisplayName(displayIndex), new Rectangle(rect.x, rect.y, rect.w, rect.h), displayModes);
-        }
-
-        private static DisplayMode displayModeFromSDL(SDL.SDL_DisplayMode mode, int displayIndex, int modeIndex)
-        {
-            SDL.SDL_PixelFormatEnumToMasks(mode.format, out int bpp, out _, out _, out _, out _);
-            return new DisplayMode(SDL.SDL_GetPixelFormatName(mode.format), new Size(mode.w, mode.h), bpp, mode.refresh_rate, modeIndex, displayIndex);
         }
 
         #endregion
@@ -1407,9 +1601,9 @@ namespace osu.Framework.Platform
         public event Action<WindowState> WindowStateChanged;
 
         /// <summary>
-        /// Invoked when the user attempts to close the window. Return value of true will cancel exit.
+        /// Invoked when the window close (X) button or another platform-native exit action has been pressed.
         /// </summary>
-        public event Func<bool> ExitRequested;
+        public event Action ExitRequested;
 
         /// <summary>
         /// Invoked when the window is about to close.
@@ -1434,6 +1628,9 @@ namespace osu.Framework.Platform
         /// <summary>
         /// Invoked when the user scrolls the mouse wheel over the window.
         /// </summary>
+        /// <remarks>
+        /// Delta is positive when mouse wheel scrolled to the up or left, in non-"natural" scroll mode (ie. the classic way).
+        /// </remarks>
         public event Action<Vector2, bool> MouseWheel;
 
         protected void TriggerMouseWheel(Vector2 delta, bool precise) => MouseWheel?.Invoke(delta, precise);
@@ -1488,7 +1685,7 @@ namespace osu.Framework.Platform
         /// <summary>
         /// Invoked when a joystick axis changes.
         /// </summary>
-        public event Action<JoystickAxis> JoystickAxisChanged;
+        public event Action<JoystickAxisSource, float> JoystickAxisChanged;
 
         /// <summary>
         /// Invoked when the user presses a button on a joystick.
@@ -1499,6 +1696,16 @@ namespace osu.Framework.Platform
         /// Invoked when the user releases a button on a joystick.
         /// </summary>
         public event Action<JoystickButton> JoystickButtonUp;
+
+        /// <summary>
+        /// Invoked when a finger moves or touches a touchscreen.
+        /// </summary>
+        public event Action<Touch> TouchDown;
+
+        /// <summary>
+        /// Invoked when a finger leaves the touchscreen.
+        /// </summary>
+        public event Action<Touch> TouchUp;
 
         /// <summary>
         /// Invoked when the user drops a file into the window.
