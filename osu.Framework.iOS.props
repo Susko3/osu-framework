@@ -82,7 +82,7 @@
 
     <!-- Any version ahead of this will cause runtime issues on iOS
          See https://github.com/xoofx/markdig/issues/564 -->
-    <PackageReference Include="Markdig" Version="0.23.0" />
+    <PackageReference Include="Markdig" Version="0.30.3" />
   </ItemGroup>
   <!-- Workaround for System.Memory conflicts on MSBuild v16
        See https://jaylee.org/archive/2019/03/31/using-span-of-t-in-xamarin-cross-targeted-projects.html -->
