@@ -300,7 +300,7 @@ namespace osu.Framework.Platform
         /// Updates <see cref="Displays"/> with the latest display information reported by SDL.
         /// </summary>
         /// <remarks>
-        /// Has no effect on values of <see cref="CurrentDisplay"/>.
+        /// Has no effect on value of <see cref="CurrentDisplay"/>.
         /// </remarks>
         private void updateDisplays()
         {
