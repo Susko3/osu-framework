@@ -557,6 +557,8 @@ namespace osu.Framework.Platform
 
                     Size = new Size(closestMode.w, closestMode.h);
 
+                    moveWindowTo(display, new Vector2(0.5f));
+
                     SDL.SDL_SetWindowDisplayMode(SDLWindowHandle, ref closestMode);
                     SDL.SDL_SetWindowFullscreen(SDLWindowHandle, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN);
                     break;
@@ -641,12 +643,23 @@ namespace osu.Framework.Platform
             if (state != WindowState.Normal)
                 return;
 
-            var configPosition = new Vector2((float)windowPositionX.Value, (float)windowPositionY.Value);
+            moveWindowTo(display, new Vector2((float)windowPositionX.Value, (float)windowPositionY.Value));
+        }
 
+        /// <summary>
+        /// Moves the window to be centered around the normalized <paramref name="position"/> on a <paramref name="display"/>.
+        /// </summary>
+        /// <param name="display">The <see cref="Display"/> to move the window to.</param>
+        /// <param name="position">Relative position on the display, normalized to <c>[-0.5, 1.5]</c>.</param>
+        private void moveWindowTo(Display display, Vector2 position)
+        {
             var displayBounds = display.Bounds;
-            var windowSize = sizeWindowed.Value;
-            int windowX = (int)Math.Round((displayBounds.Width - windowSize.Width) * configPosition.X);
-            int windowY = (int)Math.Round((displayBounds.Height - windowSize.Height) * configPosition.Y);
+
+            int windowWidth = sizeWindowed.Value.Width;
+            int windowHeight = sizeWindowed.Value.Height;
+
+            int windowX = (int)Math.Round((displayBounds.Width - windowWidth) * position.X);
+            int windowY = (int)Math.Round((displayBounds.Height - windowHeight) * position.Y);
 
             Position = new Point(windowX + displayBounds.X, windowY + displayBounds.Y);
         }
@@ -691,7 +704,7 @@ namespace osu.Framework.Platform
         /// </returns>
         protected virtual Size SetBorderless(Display display)
         {
-            // TODO: this should move the window to the appropriate display.
+            moveWindowTo(display, new Vector2(0.5f));
 
             // this is a generally sane method of handling borderless, and works well on macOS and linux.
             SDL.SDL_SetWindowFullscreen(SDLWindowHandle, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP);
