@@ -49,6 +49,8 @@ namespace osu.Framework.Platform
 
         public override string ToString() => $"Size: {Size}, BitsPerPixel: {BitsPerPixel}, RefreshRate: {RefreshRate}, Format: {Format}, DisplayIndex: {DisplayIndex}";
 
+        public string ReadableString() => $"{Size.Width}x{Size.Height}@{RefreshRate}, {Format}";
+
         public bool Equals(DisplayMode other) =>
             Format == other.Format
             && Size == other.Size
