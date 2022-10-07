@@ -394,11 +394,14 @@ namespace osu.Framework.Platform
 
             if (tryGetDisplayFromSDL(newIndex, out var display))
             {
+                bool changed = !display.Equals(internalCurrentDisplay);
+
                 internalCurrentDisplay = display;
                 CurrentDisplayBindable.Value = internalCurrentDisplay;
                 windowDisplayIndexBindable.Value = (DisplayIndex)display.Index;
 
-                fetchCurrentDisplayMode(display, WindowState == WindowState.Fullscreen);
+                if (changed)
+                    fetchCurrentDisplayMode(display, WindowState == WindowState.Fullscreen);
             }
         }
 
