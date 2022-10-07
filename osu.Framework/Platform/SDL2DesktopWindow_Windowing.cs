@@ -24,17 +24,35 @@ namespace osu.Framework.Platform
 
             DisplaysChanged += _ => CurrentDisplayBindable.Default = PrimaryDisplay;
             CurrentDisplayBindable.Default = PrimaryDisplay;
-            CurrentDisplayBindable.ValueChanged += evt =>
+            CurrentDisplayBindable.BindValueChanged(display =>
             {
-                windowDisplayIndexBindable.Value = (DisplayIndex)evt.NewValue.Index;
-            };
+                if (display.NewValue.Equals(internalCurrentDisplay))
+                    // if the values match, that means that the this set operation originates from within SDL2DesktopWindow
+                    // updating the display would lead to a feedback loop.
+                    return;
+
+                Debug.Assert(display.OldValue.Equals(internalCurrentDisplay));
+
+                commandScheduler.AddOnce(updateDisplay, display.NewValue.Index);
+            });
 
             config.BindWith(FrameworkSetting.LastDisplayDevice, windowDisplayIndexBindable);
-            windowDisplayIndexBindable.BindValueChanged(evt =>
+            windowDisplayIndexBindable.BindValueChanged(displayIndex =>
             {
-                CurrentDisplay = Displays.ElementAtOrDefault((int)evt.NewValue) ?? PrimaryDisplay;
-                pendingWindowState = windowState;
-            }, true);
+                int newIndex = (int)displayIndex.NewValue;
+
+                if (newIndex == internalCurrentDisplay.Index)
+                    // if the values match, that means that the this set operation originates from within SDL2DesktopWindow
+                    // updating the display would lead to a feedback loop.
+                    return;
+
+                Debug.Assert((int)displayIndex.OldValue == internalCurrentDisplay.Index);
+
+                commandScheduler.AddOnce(updateDisplay, newIndex);
+            });
+
+            // set the appropriate startup display.
+            commandScheduler.AddOnce(updateDisplay, (int)windowDisplayIndexBindable.Value);
 
             sizeFullscreen.ValueChanged += _ =>
             {
@@ -103,6 +121,7 @@ namespace osu.Framework.Platform
 
         private void initialiseWindowingAfterCreation()
         {
+            fetchCurrentDisplay();
             updateWindowSpecifics();
             updateWindowSize();
 
@@ -197,8 +216,6 @@ namespace osu.Framework.Platform
             set => sizeWindowed.MaxValue = value;
         }
 
-        public Bindable<Display> CurrentDisplayBindable { get; } = new Bindable<Display>();
-
         /// <summary>
         /// Bound to <see cref="FrameworkSetting.WindowMode"/>.
         /// </summary>
@@ -283,10 +300,7 @@ namespace osu.Framework.Platform
         /// Updates <see cref="Displays"/> with the latest display information reported by SDL.
         /// </summary>
         /// <remarks>
-        /// Has no effect on values of
-        /// <see cref="currentDisplay"/> /
-        /// <see cref="CurrentDisplay"/> /
-        /// <see cref="CurrentDisplayBindable"/>.
+        /// Has no effect on values of <see cref="CurrentDisplayBindable"/>.
         /// </remarks>
         private void updateDisplays()
         {
@@ -356,13 +370,37 @@ namespace osu.Framework.Platform
         /// </summary>
         public virtual Display PrimaryDisplay => Displays.First();
 
-        private Display currentDisplay = null!;
-        private int displayIndex = -1;
+        #region CurrentDisplay
 
         /// <summary>
-        /// Gets or sets the <see cref="Display"/> that this window is currently on.
+        /// The display the window is placed on currently, as reported by SDL.
+        /// This is always sourced from the SDL display query method.
         /// </summary>
-        public Display CurrentDisplay { get; private set; } = null!;
+        private Display internalCurrentDisplay = null!;
+
+        public Bindable<Display> CurrentDisplayBindable { get; } = new Bindable<Display>();
+
+        private void updateDisplay(int displayIndex)
+        {
+            if (tryGetDisplayFromSDL(displayIndex, out var display))
+                updateWindowStateAndSize(WindowState, display);
+
+            fetchCurrentDisplay();
+        }
+
+        private void fetchCurrentDisplay()
+        {
+            int newIndex = SDL.SDL_GetWindowDisplayIndex(SDLWindowHandle);
+
+            if (tryGetDisplayFromSDL(newIndex, out var display))
+            {
+                internalCurrentDisplay = display;
+                CurrentDisplayBindable.Value = internalCurrentDisplay;
+                windowDisplayIndexBindable.Value = (DisplayIndex)display.Index;
+            }
+        }
+
+        #endregion
 
         private readonly Bindable<DisplayMode> currentDisplayMode = new Bindable<DisplayMode>();
 
@@ -375,7 +413,7 @@ namespace osu.Framework.Platform
         {
             get
             {
-                SDL.SDL_GetDisplayBounds(displayIndex, out var rect);
+                SDL.SDL_GetDisplayBounds(CurrentDisplayBindable.Value.Index, out var rect);
                 return new Rectangle(rect.x, rect.y, rect.w, rect.h);
             }
         }
@@ -449,6 +487,9 @@ namespace osu.Framework.Platform
                             storeWindowPositionToConfig();
                     }
 
+                    // in case the window moved to another display.
+                    fetchCurrentDisplay();
+
                     // we may get a SDL_WINDOWEVENT_MOVED when the resolution of a display changes.
                     updateDisplays();
                     break;
@@ -483,6 +524,10 @@ namespace osu.Framework.Platform
 
                 case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_CLOSE:
                     break;
+
+                case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_DISPLAY_CHANGED:
+                    fetchCurrentDisplay();
+                    break;
             }
 
             assertDisplaysMatchSDL();
@@ -505,8 +550,7 @@ namespace osu.Framework.Platform
                 windowState = pendingWindowState.Value;
                 pendingWindowState = null;
 
-                // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-                updateWindowStateAndSize(windowState, CurrentDisplayBindable.Value ?? CurrentDisplay ?? currentDisplay);
+                updateWindowStateAndSize(windowState, CurrentDisplayBindable.Value);
             }
             else
             {
@@ -517,15 +561,6 @@ namespace osu.Framework.Platform
             {
                 WindowStateChanged?.Invoke(windowState);
                 updateMaximisedState(windowState);
-            }
-
-            int newDisplayIndex = SDL.SDL_GetWindowDisplayIndex(SDLWindowHandle);
-
-            if (displayIndex != newDisplayIndex)
-            {
-                displayIndex = newDisplayIndex;
-                currentDisplay = Displays.ElementAtOrDefault(displayIndex) ?? PrimaryDisplay;
-                CurrentDisplayBindable.Value = currentDisplay;
             }
         }
 
@@ -669,7 +704,7 @@ namespace osu.Framework.Platform
             if (WindowState != WindowState.Normal)
                 return;
 
-            var displayBounds = CurrentDisplay.Bounds;
+            var displayBounds = CurrentDisplayBindable.Value.Bounds;
 
             int windowX = Position.X - displayBounds.X;
             int windowY = Position.Y - displayBounds.Y;
