@@ -39,7 +39,7 @@ namespace osu.Framework.Platform
             config.BindWith(FrameworkSetting.LastDisplayDevice, windowDisplayIndexBindable);
             windowDisplayIndexBindable.BindValueChanged(displayIndex =>
             {
-                int newIndex = (int)displayIndex.NewValue;
+                int newIndex = displayIndex.NewValue == DisplayIndex.Default ? 0 : (int)displayIndex.NewValue;
 
                 if (newIndex == internalCurrentDisplay.Index)
                     // if the values match, that means that the this set operation originates from within SDL2DesktopWindow
