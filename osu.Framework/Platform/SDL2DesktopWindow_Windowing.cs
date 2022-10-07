@@ -22,9 +22,9 @@ namespace osu.Framework.Platform
         {
             updateDisplays();
 
-            DisplaysChanged += _ => CurrentDisplayBindable.Default = PrimaryDisplay;
-            CurrentDisplayBindable.Default = PrimaryDisplay;
-            CurrentDisplayBindable.BindValueChanged(display =>
+            DisplaysChanged += _ => CurrentDisplay.Default = PrimaryDisplay;
+            CurrentDisplay.Default = PrimaryDisplay;
+            CurrentDisplay.BindValueChanged(display =>
             {
                 if (display.NewValue.Equals(internalCurrentDisplay))
                     // if the values match, that means that the this set operation originates from within SDL2DesktopWindow
@@ -300,7 +300,7 @@ namespace osu.Framework.Platform
         /// Updates <see cref="Displays"/> with the latest display information reported by SDL.
         /// </summary>
         /// <remarks>
-        /// Has no effect on values of <see cref="CurrentDisplayBindable"/>.
+        /// Has no effect on values of <see cref="CurrentDisplay"/>.
         /// </remarks>
         private void updateDisplays()
         {
@@ -378,7 +378,7 @@ namespace osu.Framework.Platform
         /// </summary>
         private Display internalCurrentDisplay = null!;
 
-        public Bindable<Display> CurrentDisplayBindable { get; } = new Bindable<Display>();
+        public Bindable<Display> CurrentDisplay { get; } = new Bindable<Display>();
 
         private void updateDisplay(int displayIndex)
         {
@@ -397,7 +397,7 @@ namespace osu.Framework.Platform
                 bool changed = !display.Equals(internalCurrentDisplay);
 
                 internalCurrentDisplay = display;
-                CurrentDisplayBindable.Value = internalCurrentDisplay;
+                CurrentDisplay.Value = internalCurrentDisplay;
                 windowDisplayIndexBindable.Value = (DisplayIndex)display.Index;
 
                 if (changed)
@@ -418,7 +418,7 @@ namespace osu.Framework.Platform
         {
             get
             {
-                SDL.SDL_GetDisplayBounds(CurrentDisplayBindable.Value.Index, out var rect);
+                SDL.SDL_GetDisplayBounds(CurrentDisplay.Value.Index, out var rect);
                 return new Rectangle(rect.x, rect.y, rect.w, rect.h);
             }
         }
@@ -555,7 +555,7 @@ namespace osu.Framework.Platform
                 windowState = pendingWindowState.Value;
                 pendingWindowState = null;
 
-                updateWindowStateAndSize(windowState, CurrentDisplayBindable.Value);
+                updateWindowStateAndSize(windowState, CurrentDisplay.Value);
             }
             else
             {
@@ -701,7 +701,7 @@ namespace osu.Framework.Platform
             if (WindowState != WindowState.Normal)
                 return;
 
-            var displayBounds = CurrentDisplayBindable.Value.Bounds;
+            var displayBounds = CurrentDisplay.Value.Bounds;
 
             int windowX = Position.X - displayBounds.X;
             int windowY = Position.Y - displayBounds.Y;

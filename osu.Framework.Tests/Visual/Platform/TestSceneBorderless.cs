@@ -163,7 +163,7 @@ namespace osu.Framework.Tests.Visual.Platform
 
                 // set up window
                 AddStep("switch to windowed", () => windowMode.Value = WindowMode.Windowed);
-                AddStep($"move window to display {display.Index}", () => window.CurrentDisplayBindable.Value = window.Displays.ElementAt(display.Index));
+                AddStep($"move window to display {display.Index}", () => window.CurrentDisplay.Value = window.Displays.ElementAt(display.Index));
                 AddStep("set client size to 1280x720", () => config.SetValue(FrameworkSetting.WindowedSize, new Size(1280, 720)));
                 AddStep("store window position", () => originalWindowPosition = window.Position);
 
@@ -171,13 +171,13 @@ namespace osu.Framework.Tests.Visual.Platform
                 AddStep("switch to borderless", () => windowMode.Value = WindowMode.Borderless);
                 AddAssert("check window position", () => new Point(window.Position.X, window.Position.Y) == display.Bounds.Location);
                 AddAssert("check window size", () => new Size(window.Size.Width, window.Size.Height) == display.Bounds.Size, desc2);
-                AddAssert("check current screen", () => window.CurrentDisplayBindable.Value.Index == display.Index);
+                AddAssert("check current screen", () => window.CurrentDisplay.Value.Index == display.Index);
 
                 // verify the window size is restored correctly
                 AddStep("switch to windowed", () => windowMode.Value = WindowMode.Windowed);
                 AddAssert("check client size", () => window.ClientSize == new Size(1280, 720));
                 AddAssert("check window position", () => originalWindowPosition == window.Position);
-                AddAssert("check current screen", () => window.CurrentDisplayBindable.Value.Index == display.Index);
+                AddAssert("check current screen", () => window.CurrentDisplay.Value.Index == display.Index);
             }
         }
 
@@ -215,7 +215,7 @@ namespace osu.Framework.Tests.Visual.Platform
             if (window == null) return;
 
             bool fullscreen = window.WindowMode.Value == WindowMode.Fullscreen;
-            var currentBounds = window.CurrentDisplayBindable.Value.Bounds;
+            var currentBounds = window.CurrentDisplay.Value.Bounds;
 
             windowContainer.X = window.Position.X;
             windowContainer.Y = window.Position.Y;
@@ -241,7 +241,7 @@ namespace osu.Framework.Tests.Visual.Platform
 
             currentActualSize.Text = $"Window size: {window?.Size}";
             currentClientSize.Text = $"Client size: {window?.ClientSize}";
-            currentDisplay.Text = $"Current Display: {window?.CurrentDisplayBindable.Value.Name}";
+            currentDisplay.Text = $"Current Display: {window?.CurrentDisplay.Value.Name}";
         }
 
         protected override void Dispose(bool isDisposing)

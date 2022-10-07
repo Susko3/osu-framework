@@ -30,7 +30,7 @@ namespace osu.Framework.Tests.Visual.Platform
         private IWindow window;
 
         private DisplayMode displayMode => window.CurrentDisplayMode.Value;
-        private Display currentDisplay => window.CurrentDisplayBindable.Value;
+        private Display currentDisplay => window.CurrentDisplay.Value;
 
         private readonly Bindable<string> textConfigSizeFullscreen = new Bindable<string>();
         private readonly Bindable<string> textConfigWindowMode = new Bindable<string>();
@@ -95,7 +95,7 @@ namespace osu.Framework.Tests.Visual.Platform
             configWindowMode.BindValueChanged(e => textConfigWindowMode.Value = $"WindowMode: {e.NewValue}", true);
 
             window.CurrentDisplayMode.BindValueChanged(e => textCurrentDisplayMode.Value = $"CurrentDisplayMode: {e.NewValue}", true);
-            window.CurrentDisplayBindable.BindValueChanged(e => Schedule(() => textWindowDisplayModes.Text = string.Join('\n', e.NewValue.DisplayModes)), true);
+            window.CurrentDisplay.BindValueChanged(e => Schedule(() => textWindowDisplayModes.Text = string.Join('\n', e.NewValue.DisplayModes)), true);
         }
 
         protected override void Update()

@@ -134,7 +134,7 @@ namespace osu.Framework.Platform
         /// <summary>
         /// Exposes the <see cref="Display"/> that this window is currently on as a <see cref="Bindable{Display}"/>.
         /// </summary>
-        Bindable<Display> CurrentDisplayBindable { get; }
+        Bindable<Display> CurrentDisplay { get; }
 
         /// <summary>
         /// The <see cref="DisplayMode"/> for the display that this window is currently on.
