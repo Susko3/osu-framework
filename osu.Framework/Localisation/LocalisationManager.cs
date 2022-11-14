@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Platform;
 
 namespace osu.Framework.Localisation
@@ -172,6 +173,19 @@ namespace osu.Framework.Localisation
         {
             host.SetCulture(parameters.Culture, parameters.UICulture);
             currentParameters.Value = parameters;
+        }
+
+        /// <summary>
+        /// Refreshes <see cref="CurrentParameters"/>.<see cref="LocalisationParameters.Culture"/>, applying <see cref="CustomiseCulture"/> customisations.
+        /// </summary>
+        /// <remarks>Should be used in derived classes when culture specifics have changed and <see cref="LocalisationParameters.Culture"/> needs to be updated.</remarks>
+        protected void RefreshCulture()
+        {
+            // get a fresh copy of the specific culture.
+            var culture = (CultureInfo)getSpecificCultureFor(currentParameters.Value.Store.AsNonNull().UICulture).Clone();
+            CustomiseCulture(culture);
+
+            setParameters(currentParameters.Value.With(culture: culture));
         }
 
         /// <summary>
