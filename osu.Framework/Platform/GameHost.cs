@@ -1027,7 +1027,7 @@ namespace osu.Framework.Platform
         internal void SetCulture(CultureInfo culture, CultureInfo uiCulture)
         {
             CultureInfo.DefaultThreadCurrentCulture = culture;
-            CultureInfo.DefaultThreadCurrentUICulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = uiCulture;
 
             threadRunner?.SetCulture(culture, uiCulture);
         }
