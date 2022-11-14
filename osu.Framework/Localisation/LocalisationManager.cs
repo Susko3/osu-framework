@@ -22,11 +22,7 @@ namespace osu.Framework.Localisation
 
         public LocalisationManager(FrameworkConfigManager config)
         {
-            config.BindWith(FrameworkSetting.Locale, configLocale);
-            configLocale.BindValueChanged(updateLocale);
-
-            config.BindWith(FrameworkSetting.ShowUnicode, configPreferUnicode);
-            configPreferUnicode.BindValueChanged(_ => UpdateLocalisationParameters(), true);
+            setupConfig(config);
         }
 
         /// <summary>
@@ -82,6 +78,15 @@ namespace osu.Framework.Localisation
         public ILocalisedBindableString GetLocalisedBindableString(LocalisableString original) => new LocalisedBindableString(original, this);
 
         private LocaleMapping? currentLocale;
+
+        private void setupConfig(FrameworkConfigManager config)
+        {
+            config.BindWith(FrameworkSetting.Locale, configLocale);
+            configLocale.BindValueChanged(updateLocale);
+
+            config.BindWith(FrameworkSetting.ShowUnicode, configPreferUnicode);
+            configPreferUnicode.BindValueChanged(_ => UpdateLocalisationParameters(), true);
+        }
 
         private void updateLocale(ValueChangedEvent<string> locale)
         {
