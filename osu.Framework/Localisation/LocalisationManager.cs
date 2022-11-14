@@ -54,7 +54,7 @@ namespace osu.Framework.Localisation
         {
             foreach (var mapping in mappings)
             {
-                locales.Add(mapping.Name, mapping);
+                locales.Add(mapping.Name.ToLowerInvariant(), mapping);
                 firstLocale ??= mapping;
             }
 
@@ -74,7 +74,7 @@ namespace osu.Framework.Localisation
         {
             var mapping = new LocaleMapping(language, storage);
 
-            locales.Add(language, mapping);
+            locales.Add(language.ToLowerInvariant(), mapping);
             firstLocale ??= mapping;
 
             systemDefaultLocaleMapping = null; // invalidate stored default as there could be a better match.
@@ -152,7 +152,7 @@ namespace osu.Framework.Localisation
                 }
                 else
                 {
-                    if (!locales.TryGetValue(locale.NewValue, out localeMapping))
+                    if (!locales.TryGetValue(locale.NewValue.ToLowerInvariant(), out localeMapping))
                         return false;
                 }
 
@@ -210,7 +210,7 @@ namespace osu.Framework.Localisation
                 // also look for any parent (country-neutral) cultures that match. eg. `en-GB` will match `en` LocaleMapping.
                 foreach (var c in uiCulture.EnumerateParentCultures())
                 {
-                    if (locales.TryGetValue(c.Name, out var localeMapping))
+                    if (locales.TryGetValue(c.Name.ToLowerInvariant(), out var localeMapping))
                         return localeMapping;
                 }
             }
