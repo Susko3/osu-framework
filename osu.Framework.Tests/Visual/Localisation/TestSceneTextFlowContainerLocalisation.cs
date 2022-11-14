@@ -244,13 +244,13 @@ namespace osu.Framework.Tests.Visual.Localisation
 
         private class TestLocalisationStore : ILocalisationStore
         {
-            public CultureInfo EffectiveCulture { get; }
+            public CultureInfo UICulture { get; }
 
             private readonly IDictionary<string, string> translations;
 
             public TestLocalisationStore(string locale, IDictionary<string, string> translations)
             {
-                EffectiveCulture = new CultureInfo(locale);
+                UICulture = new CultureInfo(locale);
 
                 this.translations = translations;
             }

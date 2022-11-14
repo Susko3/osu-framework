@@ -131,7 +131,7 @@ namespace osu.Framework.Localisation
         /// <returns>The resultant <see cref="LocalisationParameters"/>.</returns>
         protected virtual LocalisationParameters CreateLocalisationParameters()
         {
-            var culture = currentLocale?.Storage.EffectiveCulture ?? CultureInfo.InvariantCulture;
+            var culture = currentLocale?.Storage.UICulture ?? CultureInfo.InvariantCulture;
             return new LocalisationParameters(currentLocale?.Storage, configPreferUnicode.Value, culture, culture);
         }
 
