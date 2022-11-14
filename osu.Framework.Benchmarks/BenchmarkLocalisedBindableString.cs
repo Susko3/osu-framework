@@ -5,6 +5,7 @@ using System;
 using BenchmarkDotNet.Attributes;
 using osu.Framework.Configuration;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
 using osu.Framework.Testing;
 
 namespace osu.Framework.Benchmarks
@@ -12,14 +13,16 @@ namespace osu.Framework.Benchmarks
     [MemoryDiagnoser]
     public class BenchmarkLocalisedBindableString
     {
+        private GameHost host = null!;
         private LocalisationManager manager = null!;
         private TemporaryNativeStorage storage = null!;
 
         [GlobalSetup]
         public void GlobalSetup()
         {
+            host = Host.GetSuitableDesktopHost(nameof(BenchmarkLocalisedBindableString));
             storage = new TemporaryNativeStorage(Guid.NewGuid().ToString());
-            manager = new LocalisationManager(new FrameworkConfigManager(storage));
+            manager = new LocalisationManager(host, new FrameworkConfigManager(storage));
         }
 
         [GlobalCleanup]
@@ -27,6 +30,7 @@ namespace osu.Framework.Benchmarks
         {
             manager.Dispose();
             storage.Dispose();
+            host.Dispose();
         }
 
         [Benchmark]

@@ -18,6 +18,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Platform;
 using osuTK;
 
 namespace osu.Framework.Tests.Visual.UserInterface
@@ -51,7 +52,7 @@ namespace osu.Framework.Tests.Visual.UserInterface
             var dependencies = new DependencyContainer(parent);
 
             configManager = parent.Get<FrameworkConfigManager>();
-            dependencies.Cache(manager = new LocalisationManager(configManager));
+            dependencies.Cache(manager = new LocalisationManager(parent.Get<GameHost>(), configManager));
 
             return dependencies;
         }

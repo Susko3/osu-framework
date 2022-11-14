@@ -14,6 +14,7 @@ using NUnit.Framework;
 using osu.Framework.Configuration;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
 
 namespace osu.Framework.Tests.Localisation
 {
@@ -22,14 +23,16 @@ namespace osu.Framework.Tests.Localisation
     {
         private const string default_locale = "";
 
+        private GameHost host;
         private FrameworkConfigManager config;
         private LocalisationManager manager;
 
         [SetUp]
         public void Setup()
         {
+            host = Host.GetSuitableDesktopHost(nameof(LocalisationTest));
             config = new FakeFrameworkConfigManager();
-            manager = new LocalisationManager(config);
+            manager = new LocalisationManager(host, config);
             manager.AddLanguage("en", new FakeStorage("en"));
         }
 
@@ -38,6 +41,7 @@ namespace osu.Framework.Tests.Localisation
         {
             manager?.Dispose();
             config?.Dispose();
+            host?.Dispose();
         }
 
         [Test]
@@ -45,7 +49,7 @@ namespace osu.Framework.Tests.Localisation
         {
             // reinitialise without the default language
             manager.Dispose();
-            manager = new LocalisationManager(config);
+            manager = new LocalisationManager(host, config);
 
             var localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
             Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_EN, localisedText.Value);
@@ -472,7 +476,7 @@ namespace osu.Framework.Tests.Localisation
             manager.Dispose();
             // simulate an invalid locale being set on startup.
             config.SetValue(FrameworkSetting.Locale, "invalid locale");
-            manager = new LocalisationManager(config);
+            manager = new LocalisationManager(host, config);
             // add a language to trigger a locale update
             manager.AddLanguage("en", new FakeStorage("en"));
             // the manager should reset the locale to the default value if it can't parse the locale.
@@ -489,7 +493,7 @@ namespace osu.Framework.Tests.Localisation
             manager.Dispose();
             // simulate an invalid locale being set on startup.
             config.SetValue(FrameworkSetting.Locale, "invalid locale");
-            manager = new LocalisationManager(config);
+            manager = new LocalisationManager(host, config);
             // set another invalid locale to generate a ValueChanged event with both locales invalid. (possible infinite back-and-forth between the two locales)
             config.SetValue(FrameworkSetting.Locale, "another invalid locale");
             // add a language to make sure everything still works.

@@ -19,6 +19,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
 
 namespace osu.Framework.Tests.Visual.Localisation
 {
@@ -35,7 +36,7 @@ namespace osu.Framework.Tests.Visual.Localisation
             var dependencies = new DependencyContainer(parent);
 
             configManager = parent.Get<FrameworkConfigManager>();
-            dependencies.Cache(manager = new LocalisationManager(configManager));
+            dependencies.Cache(manager = new LocalisationManager(parent.Get<GameHost>(), configManager));
 
             return dependencies;
         }

@@ -19,6 +19,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
 using osu.Framework.Testing;
 using osuTK;
 using osuTK.Graphics;
@@ -247,13 +248,14 @@ namespace osu.Framework.Tests.Visual.Sprites
         private class LocalisableTestContainer : Container
         {
             [Cached]
-            private readonly LocalisationManager localisation;
+            private LocalisationManager localisation;
 
-            public LocalisableTestContainer()
+            [BackgroundDependencyLoader]
+            private void load(GameHost host)
             {
                 var config = new FakeFrameworkConfigManager();
 
-                localisation = new LocalisationManager(config);
+                localisation = new LocalisationManager(host, config);
                 localisation.AddLanguage("en", new FakeStorage("en"));
                 localisation.AddLanguage("ja", new FakeStorage("ja"));
 
