@@ -4,6 +4,7 @@
 #nullable disable
 
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -13,18 +14,28 @@ using osu.Framework.Configuration;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Framework.Testing;
-using osu.Framework.Tests.Visual;
+using osu.Framework.Tests.Visual.Localisation;
 
 namespace osu.Framework.Tests.Localisation
 {
     [HeadlessTest]
-    public class ThreadCultureTest : FrameworkTestScene
+    public class ThreadCultureTest : LocalisationTestScene
     {
         [Resolved]
         private GameHost host { get; set; }
 
         [Resolved]
         private FrameworkConfigManager config { get; set; }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            Manager.AddLocaleMappings(new[]
+            {
+                new LocaleMapping(new TestLocalisationStore("ko-KR", new Dictionary<string, string>())),
+                new LocaleMapping(new TestLocalisationStore(CultureInfoHelper.SystemCulture.Name, new Dictionary<string, string>()))
+            });
+        }
 
         [Test]
         public void TestDefaultCultureIsSystem()
@@ -84,7 +95,7 @@ namespace osu.Framework.Tests.Localisation
 
             AddStep("start new thread", () => new Thread(() => culture = CultureInfo.CurrentCulture) { IsBackground = true }.Start());
             AddUntilStep("wait for culture", () => culture != null);
-            AddAssert($"thread culture is {name}", () => culture.Name == name);
+            AddAssert($"thread culture is {name}", () => culture.Name, () => Is.EqualTo(name));
         }
     }
 }
