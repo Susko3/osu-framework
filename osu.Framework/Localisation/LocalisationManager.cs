@@ -15,7 +15,13 @@ namespace osu.Framework.Localisation
 
         private readonly Bindable<LocalisationParameters> currentParameters = new Bindable<LocalisationParameters>(LocalisationParameters.Default);
 
-        private readonly List<LocaleMapping> locales = new List<LocaleMapping>();
+        private readonly Dictionary<string, LocaleMapping> locales = new Dictionary<string, LocaleMapping>();
+
+        /// <summary>
+        /// The first locale added to <see cref="locales"/>.
+        /// Used as the fallback locale if there are no matches.
+        /// </summary>
+        private LocaleMapping? firstLocale;
 
         private readonly Bindable<string> configLocale = new Bindable<string>();
         private readonly Bindable<bool> configPreferUnicode = new BindableBool();
@@ -31,7 +37,12 @@ namespace osu.Framework.Localisation
         /// <param name="mappings">All available locale mappings.</param>
         public void AddLocaleMappings(IEnumerable<LocaleMapping> mappings)
         {
-            locales.AddRange(mappings);
+            foreach (var mapping in mappings)
+            {
+                locales.Add(mapping.Name, mapping);
+                firstLocale ??= mapping;
+            }
+
             configLocale.TriggerChange();
         }
 
@@ -44,7 +55,11 @@ namespace osu.Framework.Localisation
         /// <param name="storage">A storage providing localisations for the specified language.</param>
         public void AddLanguage(string language, ILocalisationStore storage)
         {
-            locales.Add(new LocaleMapping(language, storage));
+            var mapping = new LocaleMapping(language, storage);
+
+            locales.Add(language, mapping);
+            firstLocale ??= mapping;
+
             configLocale.TriggerChange();
         }
 
@@ -97,7 +112,7 @@ namespace osu.Framework.Localisation
             if (locales.Count == 0)
                 return;
 
-            currentLocale = locales.Find(l => l.Name == locale.NewValue);
+            currentLocale = locales.GetValueOrDefault(locale.NewValue);
 
             if (currentLocale == null)
             {
@@ -115,12 +130,12 @@ namespace osu.Framework.Localisation
 
                 for (var c = culture; !EqualityComparer<CultureInfo>.Default.Equals(c, CultureInfo.InvariantCulture); c = c.Parent)
                 {
-                    currentLocale = locales.Find(l => l.Name == c.Name);
+                    currentLocale = locales.GetValueOrDefault(c.Name);
                     if (currentLocale != null)
                         break;
                 }
 
-                currentLocale ??= locales[0];
+                currentLocale ??= firstLocale;
             }
 
             currentParameters.Value = CreateLocalisationParameters();
