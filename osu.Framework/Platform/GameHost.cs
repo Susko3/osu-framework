@@ -211,6 +211,16 @@ namespace osu.Framework.Platform
         public Storage CacheStorage { get; protected set; }
 
         /// <summary>
+        /// Priority of cultures used for getting a <see cref="LocaleMapping"/> when requesting the user/system locale.
+        /// </summary>
+        public virtual IEnumerable<CultureInfo> UserUICulturePriority => new[] { CultureInfoHelper.SystemUICulture, CultureInfoHelper.SystemCulture, CultureInfo.InstalledUICulture };
+
+        /// <summary>
+        /// Priority of cultures for getting a more specific <see cref="LocalisationParameters.UICulture"/> from the <see cref="ILocalisationStore.UICulture"/>.
+        /// </summary>
+        public virtual IEnumerable<CultureInfo> UserCulturePriority => new[] { CultureInfoHelper.SystemCulture, CultureInfoHelper.SystemUICulture, CultureInfo.InstalledUICulture };
+
+        /// <summary>
         /// If caps-lock is enabled on the system, false if not overwritten by a subclass
         /// </summary>
         public virtual bool CapsLockEnabled => false;

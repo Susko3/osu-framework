@@ -10,6 +10,7 @@ using osu.Framework.Configuration.Tracking;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics.Video;
 using osu.Framework.Input;
+using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osuTK;
 
@@ -96,6 +97,10 @@ namespace osu.Framework.Configuration
         ExecutionMode,
 
         ShowUnicode,
+
+        /// <summary>
+        /// The user-specified <see cref="LocaleMapping.Name"/> of the current <see cref="LocaleMapping"/>, or <see cref="string.Empty"/> if using the system default locale.
+        /// </summary>
         Locale,
 
         [Obsolete("Input-related settings are now stored in InputConfigManager. Adjustments should be made via Host.AvailableInputHandlers bindables directly.")] // can be removed 20210911

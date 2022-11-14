@@ -82,7 +82,7 @@ namespace osu.Framework
         /// Creates a new <see cref="LocalisationManager"/>.
         /// </summary>
         /// <param name="frameworkConfig">The framework config manager.</param>
-        protected virtual LocalisationManager CreateLocalisationManager(FrameworkConfigManager frameworkConfig) => new LocalisationManager(frameworkConfig);
+        protected virtual LocalisationManager CreateLocalisationManager(FrameworkConfigManager frameworkConfig) => new LocalisationManager(Host, frameworkConfig);
 
         protected internal virtual UserInputManager CreateUserInputManager() => new UserInputManager();
 

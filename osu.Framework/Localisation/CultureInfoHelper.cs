@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace osu.Framework.Localisation
@@ -55,6 +56,17 @@ namespace osu.Framework.Localisation
                 culture = SystemCulture;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Enumerates all parent cultures of this <see cref="CultureInfo"/> (including itself, but excluding <see cref="CultureInfo.InvariantCulture"/>).
+        /// </summary>
+        /// <param name="cultureInfo"></param>
+        /// <returns></returns>
+        public static IEnumerable<CultureInfo> EnumerateParentCultures(this CultureInfo cultureInfo)
+        {
+            for (var c = cultureInfo; !EqualityComparer<CultureInfo>.Default.Equals(c, CultureInfo.InvariantCulture); c = c.Parent)
+                yield return c;
         }
     }
 }
