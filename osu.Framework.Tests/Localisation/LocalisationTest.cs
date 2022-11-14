@@ -56,49 +56,6 @@ namespace osu.Framework.Tests.Localisation
         }
 
         [Test]
-        public void TestConfigSettingRetainedWhenAddingNewLanguage()
-        {
-            config.SetValue(FrameworkSetting.Locale, "ja-JP");
-
-            // ensure that adding a new language which doesn't match the user's choice doesn't cause the configuration value to get reset.
-            manager.AddLanguage("po", new FakeStorage("po-OP"));
-            Assert.AreEqual("ja-JP", config.Get<string>(FrameworkSetting.Locale));
-
-            var localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
-            Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_EN, localisedText.Value);
-
-            // ensure that if the user's selection is added in a further AddLanguage call, the manager correctly translates strings.
-            manager.AddLanguage("ja-JP", new FakeStorage("ja-JP"));
-            Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_JA_JP, localisedText.Value);
-        }
-
-        [Test]
-        public void TestConfigSettingRetainedWhenAddingLocaleMappings()
-        {
-            config.SetValue(FrameworkSetting.Locale, "ja-JP");
-
-            // ensure that adding a new language which doesn't match the user's choice doesn't cause the configuration value to get reset.
-            manager.AddLocaleMappings(new[]
-            {
-                new LocaleMapping("po", new FakeStorage("po-OP")),
-                new LocaleMapping("wa", new FakeStorage("wa-NG"))
-            });
-
-            Assert.AreEqual("ja-JP", config.Get<string>(FrameworkSetting.Locale));
-
-            var localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
-            Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_EN, localisedText.Value);
-
-            // ensure that if the user's selection is added in a further AddLanguage call, the manager correctly translates strings.
-            manager.AddLocaleMappings(new[]
-            {
-                new LocaleMapping("ja-JP", new FakeStorage("ja-JP"))
-            });
-
-            Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_JA_JP, localisedText.Value);
-        }
-
-        [Test]
         public void TestNotLocalised()
         {
             manager.AddLanguage("ja-JP", new FakeStorage("ja-JP"));
