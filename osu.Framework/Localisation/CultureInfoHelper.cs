@@ -74,12 +74,12 @@ namespace osu.Framework.Localisation
         /// <summary>
         /// For use in tests only. Temporarily changes <see cref="SystemCulture"/> and <see cref="SystemUICulture"/>.
         /// </summary>
-        internal static IDisposable ChangeSystemCulture(string allCultures, string uiCulture)
+        internal static IDisposable ChangeSystemCulture(string culture, string uiCulture)
         {
             var previousCulture = SystemCulture;
             var previousUICulture = SystemUICulture;
 
-            SystemCulture = new CultureInfo(allCultures);
+            SystemCulture = new CultureInfo(culture);
             SystemUICulture = new CultureInfo(uiCulture);
 
             return new InvokeOnDisposal(() =>
