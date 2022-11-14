@@ -13,7 +13,7 @@ namespace osu.Framework.Localisation
     {
         public IBindable<LocalisationParameters> CurrentParameters => currentParameters;
 
-        private readonly Bindable<LocalisationParameters> currentParameters = new Bindable<LocalisationParameters>(new LocalisationParameters(null, false));
+        private readonly Bindable<LocalisationParameters> currentParameters = new Bindable<LocalisationParameters>(LocalisationParameters.Default);
 
         private readonly List<LocaleMapping> locales = new List<LocaleMapping>();
 
@@ -129,7 +129,11 @@ namespace osu.Framework.Localisation
         /// Can be overridden to provide custom parameters for <see cref="ILocalisableStringData"/> implementations.
         /// </remarks>
         /// <returns>The resultant <see cref="LocalisationParameters"/>.</returns>
-        protected virtual LocalisationParameters CreateLocalisationParameters() => new LocalisationParameters(currentLocale?.Storage, configPreferUnicode.Value);
+        protected virtual LocalisationParameters CreateLocalisationParameters()
+        {
+            var culture = currentLocale?.Storage.EffectiveCulture ?? CultureInfo.InvariantCulture;
+            return new LocalisationParameters(currentLocale?.Storage, configPreferUnicode.Value, culture, culture);
+        }
 
         protected virtual void Dispose(bool disposing)
         {

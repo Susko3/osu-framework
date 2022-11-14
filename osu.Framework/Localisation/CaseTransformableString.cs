@@ -35,7 +35,7 @@ namespace osu.Framework.Localisation
         public string GetLocalised(LocalisationParameters parameters)
         {
             string stringData = getStringData(parameters);
-            var cultureText = parameters.Store?.EffectiveCulture?.TextInfo ?? CultureInfo.InvariantCulture.TextInfo;
+            var cultureText = parameters.Culture.TextInfo;
 
             switch (Casing)
             {
@@ -68,7 +68,7 @@ namespace osu.Framework.Localisation
             }
         }
 
-        public override string ToString() => GetLocalised(new LocalisationParameters(null, false));
+        public override string ToString() => GetLocalised(LocalisationParameters.Default);
 
         public bool Equals(ILocalisableStringData? other) => other is CaseTransformableString transformable && Equals(transformable);
 
