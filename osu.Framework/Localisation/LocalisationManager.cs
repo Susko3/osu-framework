@@ -166,10 +166,11 @@ namespace osu.Framework.Localisation
         }
 
         /// <summary>
-        /// Sets <see cref="CurrentParameters"/> to the provided <see cref="LocalisationParameters"/>.
+        /// Sets <see cref="CurrentParameters"/> and updates <see cref="GameHost"/> culture with the provided <see cref="LocalisationParameters"/>.
         /// </summary>
         private void setParameters(LocalisationParameters parameters)
         {
+            host.SetCulture(parameters.Culture, parameters.UICulture);
             currentParameters.Value = parameters;
         }
 

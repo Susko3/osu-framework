@@ -84,21 +84,15 @@ namespace osu.Framework.Threading
         /// </summary>
         public SynchronizationContext SynchronizationContext => synchronizationContext;
 
-        /// <summary>
-        /// The culture of this thread.
-        /// </summary>
-        public CultureInfo? CurrentCulture
+        private CultureInfo? requestedCulture;
+        private CultureInfo? requestedUICulture;
+
+        public void SetCulture(CultureInfo culture, CultureInfo uiCulture) => Scheduler.Add(() =>
         {
-            get => culture;
-            set
-            {
-                culture = value;
-
-                updateCulture();
-            }
-        }
-
-        private CultureInfo? culture;
+            requestedCulture = culture;
+            requestedUICulture = uiCulture;
+            updateCulture();
+        });
 
         /// <summary>
         /// The target number of updates per second when the game window is active.
@@ -469,12 +463,10 @@ namespace osu.Framework.Threading
 
         private void updateCulture()
         {
-            if (culture == null) return;
-
             Debug.Assert(IsCurrent);
 
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = culture;
+            if (requestedCulture != null) CultureInfo.CurrentCulture = requestedCulture;
+            if (requestedUICulture != null) CultureInfo.CurrentUICulture = requestedUICulture;
         }
 
         private void setExitState(GameThreadState exitState)

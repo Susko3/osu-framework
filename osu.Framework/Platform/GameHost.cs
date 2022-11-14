@@ -955,8 +955,6 @@ namespace osu.Framework.Platform
 
         private Bindable<ExecutionMode> executionMode;
 
-        private Bindable<string> threadLocale;
-
         protected virtual void SetupConfig(IDictionary<FrameworkSetting, object> defaultOverrides)
         {
             if (!defaultOverrides.ContainsKey(FrameworkSetting.WindowMode))
@@ -1023,19 +1021,15 @@ namespace osu.Framework.Platform
 
             bypassFrontToBackPass = DebugConfig.GetBindable<bool>(DebugSetting.BypassFrontToBackPass);
 
-            threadLocale = Config.GetBindable<string>(FrameworkSetting.Locale);
-            threadLocale.BindValueChanged(locale =>
-            {
-                // return value of TryGet ignored as the failure case gives expected results (CultureInfo.InvariantCulture)
-                CultureInfoHelper.TryGetCultureInfo(locale.NewValue, out var culture);
-
-                CultureInfo.DefaultThreadCurrentCulture = culture;
-                CultureInfo.DefaultThreadCurrentUICulture = culture;
-
-                threadRunner.SetCulture(culture);
-            }, true);
-
             inputConfig = new InputConfigManager(Storage, AvailableInputHandlers);
+        }
+
+        internal void SetCulture(CultureInfo culture, CultureInfo uiCulture)
+        {
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+
+            threadRunner?.SetCulture(culture, uiCulture);
         }
 
         /// <summary>
