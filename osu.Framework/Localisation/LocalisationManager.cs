@@ -85,7 +85,11 @@ namespace osu.Framework.Localisation
             configLocale.BindValueChanged(updateLocale);
 
             config.BindWith(FrameworkSetting.ShowUnicode, configPreferUnicode);
-            configPreferUnicode.BindValueChanged(_ => UpdateLocalisationParameters(), true);
+            configPreferUnicode.BindValueChanged(preferUnicode =>
+            {
+                // optimized path, only PreferOriginalScript changed.
+                currentParameters.Value = currentParameters.Value.With(preferOriginalScript: preferUnicode.NewValue);
+            }, true);
         }
 
         private void updateLocale(ValueChangedEvent<string> locale)
@@ -119,13 +123,8 @@ namespace osu.Framework.Localisation
                 currentLocale ??= locales[0];
             }
 
-            UpdateLocalisationParameters();
+            currentParameters.Value = CreateLocalisationParameters();
         }
-
-        /// <summary>
-        /// Retrieves the latest localisation parameters using <see cref="CreateLocalisationParameters"/> and updates the current one with.
-        /// </summary>
-        protected void UpdateLocalisationParameters() => currentParameters.Value = CreateLocalisationParameters();
 
         /// <summary>
         /// Creates new <see cref="LocalisationParameters"/>.
