@@ -86,13 +86,20 @@ namespace osu.Framework.Tests.Localisation
         [Test]
         public void TestLocalisationFallback()
         {
-            manager.AddLanguage("ja", new FakeStorage("ja"));
+            using (CultureInfoHelper.ChangeSystemCulture("ja-JP"))
+            {
+                var localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
 
-            config.SetValue(FrameworkSetting.Locale, "ja-JP");
+                // string is still in EN as that's the only language
+                Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_EN, localisedText.Value);
 
-            var localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
+                // add a new language that's a better match for the system language.
+                manager.AddLanguage("ja", new FakeStorage("ja"));
 
-            Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_JA, localisedText.Value);
+                localisedText = manager.GetLocalisedBindableString(new TranslatableString(FakeStorage.LOCALISABLE_STRING_EN, FakeStorage.LOCALISABLE_STRING_EN));
+
+                Assert.AreEqual(FakeStorage.LOCALISABLE_STRING_JA, localisedText.Value);
+            }
         }
 
         [Test]
