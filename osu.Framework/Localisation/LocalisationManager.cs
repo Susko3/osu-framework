@@ -159,9 +159,9 @@ namespace osu.Framework.Localisation
                 Debug.Assert(localeMapping != null);
 
                 var culture = (CultureInfo)getSpecificCultureFor(localeMapping.Storage.UICulture).Clone(); // clone to make the culture writeable.
-                CustomiseCulture(culture);
+                var formatProvider = CustomiseCulture(culture);
 
-                setParameters(new LocalisationParameters(localeMapping.Storage, configPreferUnicode.Value, culture, localeMapping.Storage.UICulture));
+                setParameters(new LocalisationParameters(localeMapping.Storage, configPreferUnicode.Value, culture, localeMapping.Storage.UICulture, formatProvider));
                 return true;
             }
         }
@@ -183,17 +183,20 @@ namespace osu.Framework.Localisation
         {
             // get a fresh copy of the specific culture.
             var culture = (CultureInfo)getSpecificCultureFor(currentParameters.Value.Store.AsNonNull().UICulture).Clone();
-            CustomiseCulture(culture);
+            var formatProvider = CustomiseCulture(culture);
 
-            setParameters(currentParameters.Value.With(culture: culture));
+            setParameters(currentParameters.Value.With(culture: culture, formatProvider: formatProvider));
         }
 
         /// <summary>
         /// Applies customization to the <see cref="CultureInfo"/> used for culture-specific string formatting.
+        /// Can optionally return a custom <see cref="IFormatProvider"/> to be used for formatting <see cref="LocalisableFormattableString"/>s.
         /// </summary>
         /// <param name="culture">Writable <see cref="CultureInfo"/> to be used for <see cref="LocalisationParameters.Culture"/>.</param>
-        protected virtual void CustomiseCulture(CultureInfo culture)
+        /// <returns><see cref="IFormatProvider"/> to be used for <see cref="LocalisationParameters.FormatProvider"/></returns>
+        protected virtual IFormatProvider CustomiseCulture(CultureInfo culture)
         {
+            return culture;
         }
 
         #region CultureInfo/LocaleMapping helpers

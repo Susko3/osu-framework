@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Globalization;
 
 namespace osu.Framework.Localisation
@@ -21,7 +22,7 @@ namespace osu.Framework.Localisation
         public readonly bool PreferOriginalScript;
 
         /// <summary>
-        /// Culture that is used for culture-specific string formatting.
+        /// Culture that is used for culture-specific string formatting, case transformations, etc.
         /// </summary>
         public readonly CultureInfo Culture;
 
@@ -34,11 +35,16 @@ namespace osu.Framework.Localisation
         public readonly CultureInfo UICulture;
 
         /// <summary>
+        /// <see cref="IFormatProvider"/> that is used for culture-specific formatting of <see cref="LocalisableFormattableString"/>s.
+        /// </summary>
+        public readonly IFormatProvider FormatProvider;
+
+        /// <summary>
         /// Creates a new instance of <see cref="LocalisationParameters"/> based off another <see cref="LocalisationParameters"/>.
         /// </summary>
         /// <param name="parameters">The <see cref="LocalisationParameters"/> to copy values from.</param>
         protected LocalisationParameters(LocalisationParameters parameters)
-            : this(parameters.Store, parameters.PreferOriginalScript, parameters.Culture, parameters.UICulture)
+            : this(parameters.Store, parameters.PreferOriginalScript, parameters.Culture, parameters.UICulture, parameters.FormatProvider)
         {
         }
 
@@ -49,29 +55,32 @@ namespace osu.Framework.Localisation
         /// <param name="preferOriginalScript">Whether to prefer the "original" script of <see cref="RomanisableString"/>s.</param>
         /// <param name="culture">Culture that is used for culture-specific string formatting.</param>
         /// <param name="uiCulture">Culture that is used for language/string lookups.</param>
-        public LocalisationParameters(ILocalisationStore? store, bool preferOriginalScript, CultureInfo culture, CultureInfo uiCulture)
+        /// <param name="formatProvider"></param>
+        public LocalisationParameters(ILocalisationStore? store, bool preferOriginalScript, CultureInfo culture, CultureInfo uiCulture, IFormatProvider formatProvider)
         {
             Store = store;
             PreferOriginalScript = preferOriginalScript;
             Culture = culture;
             UICulture = uiCulture;
+            FormatProvider = formatProvider;
         }
 
         /// <summary>
         /// Creates new <see cref="LocalisationParameters"/> from this <see cref="LocalisationParameters"/> with the provided fields changed.
         /// </summary>
         /// <returns>New <see cref="LocalisationParameters"/> based on this <see cref="LocalisationParameters"/>.</returns>
-        public LocalisationParameters With(ILocalisationStore? store = default, bool? preferOriginalScript = default, CultureInfo? culture = default, CultureInfo? uiCulture = default) =>
-            new LocalisationParameters(
+        public LocalisationParameters With(ILocalisationStore? store = default, bool? preferOriginalScript = default, CultureInfo? culture = default, CultureInfo? uiCulture = default, IFormatProvider? formatProvider = default)
+            => new LocalisationParameters(
                 store ?? Store,
                 preferOriginalScript ?? PreferOriginalScript,
                 culture ?? Culture,
-                uiCulture ?? UICulture
+                uiCulture ?? UICulture,
+                formatProvider ?? FormatProvider
             );
 
         /// <summary>
         /// The default <see cref="LocalisationParameters"/>, corresponds to <see cref="CultureInfo.InvariantCulture"/> and everything else set to <c>default</c>.
         /// </summary>
-        public static LocalisationParameters Default = new LocalisationParameters(null, false, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture);
+        public static LocalisationParameters Default = new LocalisationParameters(null, false, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture);
     }
 }
