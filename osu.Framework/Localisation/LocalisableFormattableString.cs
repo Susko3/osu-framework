@@ -64,10 +64,10 @@ namespace osu.Framework.Localisation
                     LoggingTarget.Runtime, LogLevel.Verbose);
             }
 
-            return ToString();
+            return string.Format(CultureInfo.InvariantCulture, Format, Args);
         }
 
-        public override string ToString() => string.Format(CultureInfo.InvariantCulture, Format, Args);
+        public override string ToString() => GetLocalised(LocalisationParameters.Default);
 
         public bool Equals(LocalisableFormattableString? other)
         {
