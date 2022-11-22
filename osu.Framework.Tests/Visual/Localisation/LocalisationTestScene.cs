@@ -18,8 +18,6 @@ namespace osu.Framework.Tests.Visual.Localisation
 {
     public abstract class LocalisationTestScene : FrameworkTestScene
     {
-        private FrameworkConfigManager configManager { get; set; } = null!;
-
         protected virtual LocalisationManager CreateLocalisationManager(GameHost host, FrameworkConfigManager config) => new LocalisationManager(host, config);
 
         protected LocalisationManager Manager = null!;
@@ -38,13 +36,13 @@ namespace osu.Framework.Tests.Visual.Localisation
         {
             var dependencies = new DependencyContainer(parent);
 
-            configManager = parent.Get<FrameworkConfigManager>();
-            configManager.BindWith(FrameworkSetting.Locale, Locale);
-            configManager.BindWith(FrameworkSetting.ShowUnicode, ShowUnicode);
+            var config = parent.Get<FrameworkConfigManager>();
+            config.BindWith(FrameworkSetting.Locale, Locale);
+            config.BindWith(FrameworkSetting.ShowUnicode, ShowUnicode);
 
             Locale.Value = string.Empty; // ensure a consistent initial language.
 
-            dependencies.Cache(Manager = CreateLocalisationManager(parent.Get<GameHost>(), configManager));
+            dependencies.Cache(Manager = CreateLocalisationManager(parent.Get<GameHost>(), config));
 
             return dependencies;
         }
