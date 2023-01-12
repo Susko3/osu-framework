@@ -233,8 +233,8 @@ namespace osu.Framework.Platform.Windows
                 base.SetIconFromGroup(iconGroup);
             else
             {
-                SendMessage(windowHandle, seticon_message, (IntPtr)icon_small, smallIcon.Handle);
-                SendMessage(windowHandle, seticon_message, (IntPtr)icon_big, largeIcon.Handle);
+                SendMessage(windowHandle, seticon_message, (IntPtr)icon_small, smallIcon);
+                SendMessage(windowHandle, seticon_message, (IntPtr)icon_big, largeIcon);
             }
         }
 
@@ -267,6 +267,6 @@ namespace osu.Framework.Platform.Windows
         internal static extern bool ClientToScreen(IntPtr hWnd, ref Point point);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, Icon lParam);
     }
 }

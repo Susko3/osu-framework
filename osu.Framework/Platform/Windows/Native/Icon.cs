@@ -3,52 +3,30 @@
 
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace osu.Framework.Platform.Windows.Native
 {
-    internal class Icon : IDisposable
+    internal class Icon : SafeHandleZeroOrMinusOneIsInvalid
     {
+        [DllImport("user32.dll")]
+        private static extern IntPtr CreateIconFromResourceEx(byte[] pbIconBits, uint cbIconBits, bool fIcon, uint dwVersion, int cxDesired, int cyDesired, uint uFlags);
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
-
-        private bool disposed;
-
-        public IntPtr Handle { get; private set; }
 
         public readonly int Width;
 
         public readonly int Height;
 
-        internal Icon(IntPtr handle, int width, int height)
+        internal Icon(byte[] pbIconBits, uint cbIconBits, bool fIcon, uint dwVersion, int cxDesired, int cyDesired, uint uFlags)
+            : base(true)
         {
-            Handle = handle;
-            Width = width;
-            Height = height;
+            SetHandle(CreateIconFromResourceEx(pbIconBits, cbIconBits, fIcon, dwVersion, cxDesired, cyDesired, uFlags));
+            Width = cxDesired;
+            Height = cyDesired;
         }
 
-        ~Icon()
-        {
-            Dispose(false);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed)
-                return;
-
-            if (Handle != IntPtr.Zero)
-            {
-                DestroyIcon(Handle);
-                Handle = IntPtr.Zero;
-            }
-
-            disposed = true;
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        protected override bool ReleaseHandle() => DestroyIcon(handle);
     }
 }

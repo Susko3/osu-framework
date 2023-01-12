@@ -144,16 +144,16 @@ namespace osu.Framework.Platform.Windows.Native
                 return null;
 
             var entry = iconDir.Entries[closest];
-            IntPtr hIcon = IntPtr.Zero;
+            Icon? icon = null;
             var span = new ReadOnlySpan<byte>(data, (int)entry.ImageOffset, (int)entry.BytesInResource);
 
             if (!entry.HasRawData)
-                hIcon = CreateIconFromResourceEx(span.ToArray(), entry.BytesInResource, true, 0x00030000, width, height, lr_defaultcolor);
+                icon = new Icon(span.ToArray(), entry.BytesInResource, true, 0x00030000, width, height, lr_defaultcolor);
 
-            if (hIcon == IntPtr.Zero)
+            if (icon == null || icon.IsInvalid)
                 throw new InvalidOperationException("Couldn't create native icon handle.");
 
-            return new Icon(hIcon, width, height);
+            return icon;
         }
 
         /// <summary>
@@ -175,8 +175,5 @@ namespace osu.Framework.Platform.Windows.Native
 
             return span.ToArray();
         }
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr CreateIconFromResourceEx(byte[] pbIconBits, uint cbIconBits, bool fIcon, uint dwVersion, int cxDesired, int cyDesired, uint uFlags);
     }
 }
