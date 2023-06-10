@@ -63,7 +63,7 @@ namespace osu.Framework.Graphics.UserInterface
                 return;
 
             foreach (var entry in items)
-                addDropdownItem(GenerateItemText(entry), entry);
+                addDropdownItem(entry);
 
             if (Current.Value == null || !itemMap.Keys.Contains(Current.Value, EqualityComparer<T>.Default))
                 Current.Value = itemMap.Keys.FirstOrDefault();
@@ -100,21 +100,25 @@ namespace osu.Framework.Graphics.UserInterface
             if (boundItemSource != null)
                 throw new InvalidOperationException($"Cannot manually add dropdown items when an {nameof(ItemSource)} is bound.");
 
-            addDropdownItem(GenerateItemText(value), value);
+            addDropdownItem(value);
         }
 
-        private void addDropdownItem(LocalisableString text, T value)
+        private void addDropdownItem(T value)
         {
             if (itemMap.ContainsKey(value))
                 throw new ArgumentException($"The item {value} already exists in this {nameof(Dropdown<T>)}.");
 
-            var newItem = new DropdownMenuItem<T>(text, value, () =>
+            var newItem = new DropdownMenuItem<T>(value, () =>
             {
                 if (!Current.Disabled)
                     Current.Value = value;
 
                 Menu.State = MenuState.Closed;
             });
+
+            // inheritors expect that `virtual GenerateItemText` is only called when this dropdown is fully loaded.
+            if (IsLoaded)
+                newItem.Text.Value = GenerateItemText(value);
 
             Menu.Add(newItem);
             itemMap[value] = newItem;
@@ -146,6 +150,12 @@ namespace osu.Framework.Graphics.UserInterface
             return true;
         }
 
+        /// <summary>
+        /// Called to generate the text to be shown for this <paramref name="item"/>.
+        /// </summary>
+        /// <remarks>
+        /// Can be overriden if custom behaviour is needed. Will only be called after this <see cref="Dropdown{T}"/> has fully loaded.
+        /// </remarks>
         protected virtual LocalisableString GenerateItemText(T item)
         {
             switch (item)
@@ -261,6 +271,9 @@ namespace osu.Framework.Graphics.UserInterface
         {
             base.LoadComplete();
 
+            foreach (var item in MenuItems)
+                item.Text.Value = GenerateItemText(item.Value);
+
             Header.Label = SelectedItem?.Text.Value ?? default;
         }
 
@@ -270,7 +283,7 @@ namespace osu.Framework.Graphics.UserInterface
             // null is not a valid value for Dictionary, so neither here
             if (args.NewValue == null && SelectedItem != null)
             {
-                selectedItem = new DropdownMenuItem<T>(default, default);
+                selectedItem = new DropdownMenuItem<T>(default(LocalisableString), default);
             }
             else if (SelectedItem == null || !EqualityComparer<T>.Default.Equals(SelectedItem.Value, args.NewValue))
             {
