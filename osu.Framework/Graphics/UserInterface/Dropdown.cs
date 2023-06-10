@@ -267,12 +267,17 @@ namespace osu.Framework.Graphics.UserInterface
             }
         }
 
-        protected override void LoadComplete()
+        protected override void LoadAsyncComplete()
         {
-            base.LoadComplete();
+            base.LoadAsyncComplete();
 
             foreach (var item in MenuItems)
                 item.Text.Value = GenerateItemText(item.Value);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
 
             Header.Label = SelectedItem?.Text.Value ?? default;
         }
