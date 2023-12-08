@@ -7,8 +7,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using JetBrains.Annotations;
 using osu.Framework.Caching;
 using osu.Framework.Extensions.TypeExtensions;
@@ -650,7 +652,13 @@ namespace osu.Framework.Bindables
 
         private void addWeakReference(WeakReference<BindableList<T>> weakReference)
         {
-            bindings ??= new LockedWeakList<BindableList<T>>();
+            if (bindings == null)
+            {
+                // in case of multiple threads entering, the first LockedWeakList will be used and the others will be discarded
+                Interlocked.CompareExchange(ref bindings, new LockedWeakList<BindableList<T>>(), null);
+                Debug.Assert(bindings != null);
+            }
+
             bindings.Add(weakReference);
         }
 

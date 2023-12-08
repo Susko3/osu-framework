@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using osu.Framework.Caching;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Lists;
@@ -484,7 +485,13 @@ namespace osu.Framework.Bindables
 
         private void addWeakReference(WeakReference<BindableDictionary<TKey, TValue>> weakReference)
         {
-            bindings ??= new LockedWeakList<BindableDictionary<TKey, TValue>>();
+            if (bindings == null)
+            {
+                // in case of multiple threads entering, the first LockedWeakList will be used and the others will be discarded
+                Interlocked.CompareExchange(ref bindings, new LockedWeakList<BindableDictionary<TKey, TValue>>(), null);
+                Debug.Assert(bindings != null);
+            }
+
             bindings.Add(weakReference);
         }
 

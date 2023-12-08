@@ -5,8 +5,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -156,7 +158,9 @@ namespace osu.Framework.Bindables
             value = Default = defaultValue;
         }
 
-        protected LockedWeakList<Bindable<T>> Bindings { get; private set; }
+        private LockedWeakList<Bindable<T>> bindings;
+
+        protected LockedWeakList<Bindable<T>> Bindings => bindings;
 
         void IBindable.BindTo(IBindable them)
         {
@@ -237,8 +241,14 @@ namespace osu.Framework.Bindables
 
         private void addWeakReference(WeakReference<Bindable<T>> weakReference)
         {
-            Bindings ??= new LockedWeakList<Bindable<T>>();
-            Bindings.Add(weakReference);
+            if (bindings == null)
+            {
+                // in case of multiple threads entering, the first LockedWeakList will be used and the others will be discarded
+                Interlocked.CompareExchange(ref bindings, new LockedWeakList<Bindable<T>>(), null);
+                Debug.Assert(bindings != null);
+            }
+
+            bindings.Add(weakReference);
         }
 
         private void removeWeakReference(WeakReference<Bindable<T>> weakReference) => Bindings?.Remove(weakReference);
