@@ -22,7 +22,6 @@ namespace osu.Framework.Android.Input
             if (text?.Length() > 0)
             {
                 targetView.OnCommitText(text.ToString());
-                return true;
             }
 
             return base.CommitText(text, newCursorPosition);
@@ -60,7 +59,7 @@ namespace osu.Framework.Android.Input
                 SendKeyEvent(ed);
             }
 
-            return true;
+            return base.DeleteSurroundingText(beforeLength, afterLength);
         }
     }
 }
