@@ -297,7 +297,7 @@ namespace osu.Framework.Android
 
             outAttrs.ImeOptions = ImeFlags.NoExtractUi | ImeFlags.NoFullscreen;
             outAttrs.InputType = InputTypes.TextVariationVisiblePassword | InputTypes.TextFlagNoSuggestions;
-            return new AndroidInputConnection(this, true);
+            return new AndroidInputConnection(this);
         }
 
         internal void StartTextInput()

@@ -15,8 +15,8 @@ namespace osu.Framework.Android.Input
 
         private volatile int batchNestingLevel;
 
-        public AndroidInputConnection(AndroidGameView targetView, bool fullEditor)
-            : base(targetView, fullEditor)
+        public AndroidInputConnection(AndroidGameView targetView)
+            : base(targetView, fullEditor: true)
         {
             this.targetView = targetView;
         }
