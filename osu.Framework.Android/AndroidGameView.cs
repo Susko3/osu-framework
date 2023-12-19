@@ -130,6 +130,11 @@ namespace osu.Framework.Android
             return false;
         }
 
+        public void OnComposingText(string text, int selectionStart, int selectionLength)
+        {
+            ComposingText?.Invoke(text, selectionStart, selectionLength);
+        }
+
         public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
         {
             if (e == null) return base.OnKeyDown(keyCode, e);
@@ -357,6 +362,11 @@ namespace osu.Framework.Android
         /// Invoked when text is committed by an <see cref="AndroidInputConnection"/>.
         /// </summary>
         public event Action<string>? CommitText;
+
+        /// <summary>
+        /// Invoked when the IME composition of <see cref="AndroidInputConnection"/> changes.
+        /// </summary>
+        public event Action<string, int, int>? ComposingText;
 
         /// <summary>
         /// Invoked when the <see cref="game"/> has been started on the <see cref="Host"/>.

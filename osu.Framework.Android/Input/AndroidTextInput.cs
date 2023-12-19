@@ -17,7 +17,15 @@ namespace osu.Framework.Android.Input
 
         private void commitText(string text)
         {
-            TriggerTextInput(text);
+            if (ImeActive)
+                TriggerImeResult(text);
+            else
+                TriggerTextInput(text);
+        }
+
+        private void composingText(string text, int selectionStart, int selectionLength)
+        {
+            TriggerImeComposition(text, selectionStart, selectionLength);
         }
 
         private void keyDown(Keycode arg, KeyEvent e)
@@ -30,6 +38,7 @@ namespace osu.Framework.Android.Input
         {
             view.KeyDown += keyDown;
             view.CommitText += commitText;
+            view.ComposingText += composingText;
             view.StartTextInput();
         }
 
@@ -42,6 +51,7 @@ namespace osu.Framework.Android.Input
         {
             view.KeyDown -= keyDown;
             view.CommitText -= commitText;
+            view.ComposingText -= composingText;
             view.StopTextInput();
         }
     }
