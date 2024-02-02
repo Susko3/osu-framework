@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using osu.Framework.Configuration;
 using osu.Framework.Extensions;
@@ -21,6 +22,14 @@ namespace osu.Framework.Platform
         protected DesktopGameHost(string gameName, HostOptions options = null)
             : base(gameName, options)
         {
+            try
+            {
+                Console.OutputEncoding = Encoding.UTF8;
+            }
+            catch
+            {
+            }
+
             ipcPort = Options.IPCPort;
             IsPortableInstallation = Options.PortableInstallation;
         }
