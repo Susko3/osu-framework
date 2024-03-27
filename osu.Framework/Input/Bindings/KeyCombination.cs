@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using osu.Framework.Input.States;
+using osu.Framework.Logging;
 using osuTK;
 using osuTK.Input;
 
@@ -187,7 +188,20 @@ namespace osu.Framework.Input.Bindings
         /// <returns>Whether this is a match.</returns>
         internal static bool ContainsKeyPermissive(ImmutableArray<InputKey> candidate, InputKey physicalKey, InputKey? virtualKey)
         {
-            return candidate.Contains(physicalKey) || (virtualKey != null && candidate.Contains(virtualKey.Value));
+            bool containsPhysical = candidate.Contains(physicalKey);
+            bool containsVirtual = virtualKey != null && candidate.Contains(virtualKey.Value);
+
+            if (containsPhysical && containsVirtual)
+                logProblem(candidate, physicalKey, virtualKey);
+
+            return containsPhysical || containsVirtual;
+
+            static void logProblem(ImmutableArray<InputKey> candidate, InputKey physicalKey, InputKey? virtualKey)
+            {
+                string combination = string.Join('-', candidate);
+                Logger.Log($"Same key present both as a physical key and as its virtual mapping. Invalid candidate key combination ({combination}) "
+                           + $"or bad data from input handler (physical: {physicalKey}, virtual: {virtualKey})?");
+            }
         }
 
         /// <summary>
