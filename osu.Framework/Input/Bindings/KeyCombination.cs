@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using osu.Framework.Extensions;
 using osu.Framework.Input.States;
 using osu.Framework.Logging;
 using osuTK;
@@ -188,6 +189,10 @@ namespace osu.Framework.Input.Bindings
         /// <returns>Whether this is a match.</returns>
         internal static bool ContainsKeyPermissive(ImmutableArray<InputKey> candidate, InputKey physicalKey, InputKey? virtualKey)
         {
+            Debug.Assert(physicalKey.IsPhysical());
+            if (virtualKey != null)
+                Debug.Assert(virtualKey.Value.IsVirtual());
+
             bool containsPhysical = candidate.Contains(physicalKey);
             bool containsVirtual = virtualKey != null && candidate.Contains(virtualKey.Value);
 
