@@ -1,27 +1,26 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osuTK.Input;
-using static SDL2.SDL;
+using SDL;
+using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL2
 {
-    public static class SDL2Extensions
+    public static unsafe class SDL2Extensions
     {
         public static Key ToKey(this SDL_Keysym sdlKeysym)
         {
             // Apple devices don't have the notion of NumLock (they have a Clear key instead).
             // treat them as if they always have NumLock on (the numpad always performs its primary actions).
-            bool numLockOn = sdlKeysym.mod.HasFlagFast(SDL_Keymod.SDL_KMOD_NUM) || RuntimeInfo.IsApple;
+            bool numLockOn = sdlKeysym.Mod.HasFlagFast(SDL_Keymod.SDL_KMOD_NUM) || RuntimeInfo.IsApple;
 
             switch (sdlKeysym.scancode)
             {
@@ -864,8 +863,7 @@ namespace osu.Framework.Platform.SDL2
 
         public static WindowState ToWindowState(this SDL_WindowFlags windowFlags)
         {
-            if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP) ||
-                windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_BORDERLESS))
+            if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_BORDERLESS))
                 return WindowState.FullscreenBorderless;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MINIMIZED))
@@ -895,9 +893,6 @@ namespace osu.Framework.Platform.SDL2
 
                 case WindowState.Minimised:
                     return SDL_WindowFlags.SDL_WINDOW_MINIMIZED;
-
-                case WindowState.FullscreenBorderless:
-                    return SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP;
             }
 
             return 0;
@@ -1013,31 +1008,12 @@ namespace osu.Framework.Platform.SDL2
                 w = rectangle.Width,
             };
 
-        /// <summary>
-        /// Converts a UTF-8 byte pointer to a string.
-        /// </summary>
-        /// <remarks>Most commonly used with SDL text events.</remarks>
-        /// <param name="bytePointer">Pointer to UTF-8 encoded byte array.</param>
-        /// <param name="str">The resulting string</param>
-        /// <returns><c>true</c> if the <paramref name="bytePointer"/> was successfully converted to a string.</returns>
-        public static unsafe bool TryGetStringFromBytePointer(byte* bytePointer, out string str)
-        {
-            IntPtr ptr = new IntPtr(bytePointer);
-
-            if (ptr == IntPtr.Zero)
-            {
-                str = null;
-                return false;
-            }
-
-            str = Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
-            return true;
-        }
-
         public static DisplayMode ToDisplayMode(this SDL_DisplayMode mode, int displayIndex)
         {
-            SDL_GetMasksForPixelFormatEnum(mode.format, out int bpp, out _, out _, out _, out _);
-            return new DisplayMode(SDL_GetPixelFormatName(mode.format), new Size(mode.w, mode.h), bpp, mode.refresh_rate, displayIndex);
+            int bpp = 0;
+            uint unused;
+            SDL_GetMasksForPixelFormatEnum(mode.format, &bpp, &unused, &unused, &unused, &unused);
+            return new DisplayMode(SDL_GetPixelFormatName(mode.format), new Size(mode.w, mode.h), bpp, (int)MathF.Round(mode.refresh_rate), displayIndex);
         }
 
         public static string ReadableName(this SDL_LogCategory category)
@@ -1114,30 +1090,11 @@ namespace osu.Framework.Platform.SDL2
         /// <summary>
         /// Gets the SDL error, and then clears it.
         /// </summary>
-        public static string GetAndClearError()
+        public static string? GetAndClearError()
         {
-            string error = SDL_GetError();
+            string? error = SDL_GetError();
             SDL_ClearError();
             return error;
-        }
-
-        private static bool tryGetTouchDeviceIndex(long touchId, out int index)
-        {
-            int n = SDL_GetNumTouchDevices();
-
-            for (int i = 0; i < n; i++)
-            {
-                long currentTouchId = SDL_GetTouchDevice(i);
-
-                if (touchId == currentTouchId)
-                {
-                    index = i;
-                    return true;
-                }
-            }
-
-            index = -1;
-            return false;
         }
 
         /// <summary>
@@ -1146,16 +1103,10 @@ namespace osu.Framework.Platform.SDL2
         /// <remarks>
         /// On Windows, this will return <c>"touch"</c> for touchscreen events or <c>"pen"</c> for pen/tablet events.
         /// </remarks>
-        public static bool TryGetTouchName(this SDL_TouchFingerEvent e, out string name)
+        public static bool TryGetTouchName(this SDL_TouchFingerEvent e, [NotNullWhen(true)] out string? name)
         {
-            if (tryGetTouchDeviceIndex(e.touchId, out int index))
-            {
-                name = SDL_GetTouchName(index);
-                return name != null;
-            }
-
-            name = null;
-            return false;
+            name = SDL_GetTouchDeviceName(e.touchID);
+            return !string.IsNullOrEmpty(name);
         }
     }
 }

@@ -2,15 +2,21 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using osu.Framework.Allocation;
+using osu.Framework.Configuration;
 using osu.Framework.Input.Handlers.Mouse;
+using osu.Framework.Logging;
 using osu.Framework.Platform.SDL2;
 using osu.Framework.Platform.Windows.Native;
 using osuTK;
 using osuTK.Input;
-using static SDL2.SDL;
+using SDL;
+using static SDL.SDL3;
 using Icon = osu.Framework.Platform.Windows.Native.Icon;
 
 namespace osu.Framework.Platform.Windows
@@ -28,12 +34,12 @@ namespace osu.Framework.Platform.Windows
         private Icon? smallIcon;
         private Icon? largeIcon;
 
-        private const int wm_killfocus = 8;
-
         /// <summary>
         /// Whether to apply the <see cref="windows_borderless_width_hack"/>.
         /// </summary>
         private readonly bool applyBorderlessWindowHack;
+
+        public override IEnumerable<WindowMode> SupportedWindowModes => Enum.GetValues<WindowMode>();
 
         public WindowsWindow(GraphicsSurfaceType surfaceType)
             : base(surfaceType)
@@ -85,33 +91,55 @@ namespace osu.Framework.Platform.Windows
             // disable all pen and touch feedback as this causes issues when running "optimised" fullscreen under Direct3D11.
             foreach (var feedbackType in Enum.GetValues<FeedbackType>())
                 Native.Input.SetWindowFeedbackSetting(WindowHandle, feedbackType, false);
-
-            // enable window message events to use with `OnSDLEvent` below.
-            SDL_EventState(SDL_EventType.SDL_SYSWMEVENT, SDL_ENABLE);
         }
 
-        protected override void HandleEventFromFilter(SDL_Event e)
+        public override unsafe void Run()
         {
-            if (e.type == SDL_EventType.SDL_SYSWMEVENT)
+            SDL_SetWindowsMessageHook(&onWndProc, ObjectHandle.Handle);
+            base.Run();
+        }
+
+        protected override int HandleEventFromFilter(SDL_Event evt)
+        {
+            bool rawMouse = SDL_GetRelativeMouseMode() == SDL_bool.SDL_TRUE;
+
+            switch (evt.type)
             {
-                var wmMsg = Marshal.PtrToStructure<SDL2Structs.SDL_SysWMmsg>(e.syswm.msg);
-                var m = wmMsg.msg.win;
+                // handle raw mouse and keyboard events in SDL_EventFilter for lower latency.
+                case SDL_EventType.SDL_EVENT_MOUSE_MOTION when rawMouse:
+                case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN when rawMouse:
+                case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP when rawMouse:
+                case SDL_EventType.SDL_EVENT_MOUSE_WHEEL when rawMouse:
+                case SDL_EventType.SDL_EVENT_KEY_DOWN:
+                case SDL_EventType.SDL_EVENT_KEY_UP:
+                    HandleEvent(evt);
+                    return DROP_EVENT;
 
-                switch (m.msg)
-                {
-                    case wm_killfocus:
-                        warpCursorFromFocusLoss();
-                        break;
-
-                    case Imm.WM_IME_STARTCOMPOSITION:
-                    case Imm.WM_IME_COMPOSITION:
-                    case Imm.WM_IME_ENDCOMPOSITION:
-                        handleImeMessage(m.hwnd, m.msg, m.lParam);
-                        break;
-                }
+                case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_LOST:
+                    warpCursorFromFocusLoss();
+                    break;
             }
 
-            base.HandleEventFromFilter(e);
+            return base.HandleEventFromFilter(evt);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static unsafe SDL_bool onWndProc(IntPtr userdata, MSG* msg)
+        {
+            var handle = new ObjectHandle<WindowsWindow>(userdata);
+            if (!handle.GetTarget(out var window))
+                return SDL_bool.SDL_TRUE;
+
+            switch (msg->message)
+            {
+                case Imm.WM_IME_STARTCOMPOSITION:
+                case Imm.WM_IME_COMPOSITION:
+                case Imm.WM_IME_ENDCOMPOSITION:
+                    window.handleImeMessage(msg->hwnd, msg->message, msg->lParam);
+                    break;
+            }
+
+            return SDL_bool.SDL_TRUE;
         }
 
         /// <summary>
@@ -125,7 +153,7 @@ namespace osu.Framework.Platform.Windows
         /// <remarks>
         /// The normal warp in <see cref="MouseHandler.transferLastPositionToHostCursor"/> doesn't work in fullscreen,
         /// as it is called when the window has already lost focus and is minimized.
-        /// So we do an out-of-band warp, immediately after receiving the <see cref="wm_killfocus"/> message.
+        /// So we do an out-of-band warp, immediately after receiving the <see cref="SDL_EventType.SDL_EVENT_WINDOW_FOCUS_LOST"/> message.
         /// </remarks>
         private void warpCursorFromFocusLoss()
         {
@@ -134,6 +162,7 @@ namespace osu.Framework.Platform.Windows
                 && RelativeMouseMode)
             {
                 var pt = PointToScreen(new Point((int)LastMousePosition.Value.X, (int)LastMousePosition.Value.Y));
+                Logger.Log($"global warp to {pt}");
                 SDL_WarpMouseGlobal(pt.X, pt.Y); // this directly calls the SetCursorPos win32 API
             }
         }
@@ -148,15 +177,17 @@ namespace osu.Framework.Platform.Windows
 
         public override void ResetIme() => ScheduleCommand(() => Imm.CancelComposition(WindowHandle));
 
-        protected override unsafe void HandleTextInputEvent(SDL_TextInputEvent evtText)
+        protected override void HandleTextInputEvent(SDL_TextInputEvent evtText)
         {
-            if (!SDL2Extensions.TryGetStringFromBytePointer(evtText.text, out string sdlResult))
+            string? text = evtText.GetText();
+
+            if (text == null)
                 return;
 
             // Block SDL text input if it was already handled by `handleImeMessage()`.
             // SDL truncates text over 32 bytes and sends it as multiple events.
             // We assume these events will be handled in the same `pollSDLEvents()` call.
-            if (lastImeResult?.Contains(sdlResult) == true)
+            if (lastImeResult?.Contains(text) == true)
             {
                 // clear the result after this SDL event loop finishes so normal text input isn't blocked.
                 EventScheduler.AddOnce(() => lastImeResult = null);
@@ -226,7 +257,7 @@ namespace osu.Framework.Platform.Windows
 
         protected override void HandleTouchFingerEvent(SDL_TouchFingerEvent evtTfinger)
         {
-            if (evtTfinger.TryGetTouchName(out string name) && name == "pen")
+            if (evtTfinger.TryGetTouchName(out string? name) && name == "pen")
             {
                 // Windows Ink tablet/pen handling
                 // InputManager expects to receive this as mouse events, to have proper `mouseSource` input priority (see InputManager.GetPendingInputs)
@@ -270,7 +301,7 @@ namespace osu.Framework.Platform.Windows
         /// <remarks>Used on <see cref="GraphicsSurfaceType.OpenGL"/> and <see cref="GraphicsSurfaceType.Vulkan"/>.</remarks>
         private const int windows_borderless_width_hack = 1;
 
-        protected override Size SetBorderless(Display display)
+        protected override unsafe Size SetBorderless(Display display)
         {
             SDL_SetWindowBordered(SDLWindowHandle, SDL_bool.SDL_FALSE);
 

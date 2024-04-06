@@ -77,6 +77,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeAnalysis", "CodeAnalysi
 		CodeAnalysis\osu-framework.ruleset = CodeAnalysis\osu-framework.ruleset
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SDL3-CS", "..\SDL3-CS\SDL3-CS\SDL3-CS.csproj", "{E6873317-40B1-421C-AAC1-A59761350C9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -371,6 +373,18 @@ Global
 		{A0DDCF0A-A352-4CC6-8E6E-0E16CAA50CDD}.Release|iPhone.Build.0 = Release|Any CPU
 		{A0DDCF0A-A352-4CC6-8E6E-0E16CAA50CDD}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{A0DDCF0A-A352-4CC6-8E6E-0E16CAA50CDD}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|iPhone.Build.0 = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{E6873317-40B1-421C-AAC1-A59761350C9C}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

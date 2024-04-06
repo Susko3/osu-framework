@@ -15,12 +15,13 @@ using osu.Framework.Logging;
 using osu.Framework.Platform.SDL2;
 using osuTK;
 using osuTK.Input;
-using static SDL2.SDL;
+using SDL;
+using static SDL.SDL3;
 using RectangleF = osu.Framework.Graphics.Primitives.RectangleF;
 
 namespace osu.Framework.Platform
 {
-    internal partial class SDL2Window
+    internal unsafe partial class SDL2Window
     {
         private void setupInput(FrameworkConfigManager config)
         {
@@ -59,15 +60,15 @@ namespace osu.Framework.Platform
         /// Only works with <see cref="RelativeMouseMode"/> disabled.
         /// </summary>
         /// <remarks>
-        /// If the cursor leaves the window while it's captured, <see cref="SDL_WindowEventID.SDL_EVENT_WINDOW_MOUSE_LEAVE"/> is not sent until the button(s) are released.
-        /// And if the cursor leaves and enters the window while captured, <see cref="SDL_WindowEventID.SDL_EVENT_WINDOW_MOUSE_ENTER"/> is not sent either.
-        /// We disable relative mode when the cursor exits window bounds (not on the event), but we only enable it again on <see cref="SDL_WindowEventID.SDL_EVENT_WINDOW_MOUSE_ENTER"/>.
+        /// If the cursor leaves the window while it's captured, <see cref="SDL_EventType.SDL_EVENT_WINDOW_MOUSE_LEAVE"/> is not sent until the button(s) are released.
+        /// And if the cursor leaves and enters the window while captured, <see cref="SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER"/> is not sent either.
+        /// We disable relative mode when the cursor exits window bounds (not on the event), but we only enable it again on <see cref="SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER"/>.
         /// The above culminate in <see cref="RelativeMouseMode"/> staying off when the cursor leaves and enters the window bounds when any buttons are pressed.
         /// This is an invalid state, as the cursor is inside the window, and <see cref="RelativeMouseMode"/> is off.
         /// </remarks>
         internal bool MouseAutoCapture
         {
-            set => ScheduleCommand(() => SDL_SetHint(SDL_HINT_MOUSE_AUTO_CAPTURE, value ? "1" : "0"));
+            set => ScheduleCommand(() => SDL_SetHint(SDL_HINT_MOUSE_AUTO_CAPTURE, value ? "1"u8 : "0"u8));
         }
 
         /// <summary>
@@ -93,10 +94,16 @@ namespace osu.Framework.Platform
             }
         }
 
-        private readonly Dictionary<int, SDL2ControllerBindings> controllers = new Dictionary<int, SDL2ControllerBindings>();
+        private readonly Dictionary<SDL_JoystickID, SDL2ControllerBindings> controllers = new Dictionary<SDL_JoystickID, SDL2ControllerBindings>();
 
         private void updateCursorVisibility(bool cursorVisible) =>
-            ScheduleCommand(() => SDL_ShowCursor(cursorVisible ? SDL_ENABLE : SDL_DISABLE));
+            ScheduleCommand(() =>
+            {
+                if (cursorVisible)
+                    SDL_ShowCursor();
+                else
+                    SDL_HideCursor();
+            });
 
         /// <summary>
         /// Updates OS cursor confinement based on the current <see cref="CursorState"/>, <see cref="CursorConfineRect"/> and <see cref="RelativeMouseMode"/>.
@@ -105,18 +112,22 @@ namespace osu.Framework.Platform
         {
             bool confined = CursorState.HasFlagFast(CursorState.Confined);
 
-            ScheduleCommand(() => SDL_SetWindowGrab(SDLWindowHandle, confined ? SDL_bool.SDL_TRUE : SDL_bool.SDL_FALSE));
+            ScheduleCommand(() => SDL_SetWindowMouseGrab(SDLWindowHandle, confined ? SDL_bool.SDL_TRUE : SDL_bool.SDL_FALSE));
 
             // Don't use SDL_SetWindowMouseRect when relative mode is enabled, as relative mode already confines the OS cursor to the window.
             // This is fine for our use case, as UserInputManager will clamp the mouse position.
             if (CursorConfineRect != null && confined && !RelativeMouseMode)
             {
                 var rect = ((RectangleI)(CursorConfineRect / Scale)).ToSDLRect();
-                ScheduleCommand(() => SDL_SetWindowMouseRect(SDLWindowHandle, ref rect));
+                ScheduleCommand(r =>
+                {
+                    // need to use statement lambda because of https://youtrack.jetbrains.com/issue/RIDER-110421
+                    SDL_SetWindowMouseRect(SDLWindowHandle, &r);
+                }, rect);
             }
             else
             {
-                ScheduleCommand(() => SDL_SetWindowMouseRect(SDLWindowHandle, IntPtr.Zero));
+                ScheduleCommand(() => SDL_SetWindowMouseRect(SDLWindowHandle, null));
             }
         }
 
@@ -140,21 +151,22 @@ namespace osu.Framework.Platform
                 JoystickButtonUp?.Invoke(button);
         }
 
-        private Point previousPolledPoint = Point.Empty;
+        private PointF previousPolledPoint = PointF.Empty;
 
         private SDLButtonMask pressedButtons;
 
         private void pollMouse()
         {
-            SDLButtonMask globalButtons = (SDLButtonMask)SDL_GetGlobalMouseState(out int x, out int y);
+            float x, y;
+            SDLButtonMask globalButtons = (SDLButtonMask)SDL_GetGlobalMouseState(&x, &y);
 
             if (previousPolledPoint.X != x || previousPolledPoint.Y != y)
             {
-                previousPolledPoint = new Point(x, y);
+                previousPolledPoint = new PointF(x, y);
 
                 var pos = WindowMode.Value == Configuration.WindowMode.Windowed ? Position : windowDisplayBounds.Location;
-                int rx = x - pos.X;
-                int ry = y - pos.Y;
+                float rx = x - pos.X;
+                float ry = y - pos.Y;
 
                 MouseMove?.Invoke(new Vector2(rx * Scale, ry * Scale));
             }
@@ -163,13 +175,13 @@ namespace osu.Framework.Platform
             SDLButtonMask buttonsToRelease = pressedButtons & (globalButtons ^ pressedButtons);
 
             // the outer if just optimises for the common case that there are no buttons to release.
-            if (buttonsToRelease != SDLButtonMask.None)
+            if (buttonsToRelease != 0)
             {
-                if (buttonsToRelease.HasFlagFast(SDLButtonMask.Left)) MouseUp?.Invoke(MouseButton.Left);
-                if (buttonsToRelease.HasFlagFast(SDLButtonMask.Middle)) MouseUp?.Invoke(MouseButton.Middle);
-                if (buttonsToRelease.HasFlagFast(SDLButtonMask.Right)) MouseUp?.Invoke(MouseButton.Right);
-                if (buttonsToRelease.HasFlagFast(SDLButtonMask.X1)) MouseUp?.Invoke(MouseButton.Button1);
-                if (buttonsToRelease.HasFlagFast(SDLButtonMask.X2)) MouseUp?.Invoke(MouseButton.Button2);
+                if (buttonsToRelease.HasFlagFast(SDLButtonMask.SDL_BUTTON_LMASK)) MouseUp?.Invoke(MouseButton.Left);
+                if (buttonsToRelease.HasFlagFast(SDLButtonMask.SDL_BUTTON_MMASK)) MouseUp?.Invoke(MouseButton.Middle);
+                if (buttonsToRelease.HasFlagFast(SDLButtonMask.SDL_BUTTON_RMASK)) MouseUp?.Invoke(MouseButton.Right);
+                if (buttonsToRelease.HasFlagFast(SDLButtonMask.SDL_BUTTON_X1MASK)) MouseUp?.Invoke(MouseButton.Button1);
+                if (buttonsToRelease.HasFlagFast(SDLButtonMask.SDL_BUTTON_X2MASK)) MouseUp?.Invoke(MouseButton.Button2);
             }
         }
 
@@ -190,7 +202,7 @@ namespace osu.Framework.Platform
         public void SetTextInputRect(RectangleF rect) => ScheduleCommand(() =>
         {
             var sdlRect = ((RectangleI)(rect / Scale)).ToSDLRect();
-            SDL_SetTextInputRect(ref sdlRect);
+            SDL_SetTextInputRect(&sdlRect);
         });
 
         #region SDL Event Handling
@@ -200,17 +212,17 @@ namespace osu.Framework.Platform
             switch (evtDrop.type)
             {
                 case SDL_EventType.SDL_EVENT_DROP_FILE:
-                    string str = UTF8_ToManaged(evtDrop.file, true);
-                    if (str != null)
-                        DragDrop?.Invoke(str);
+                    string? data = evtDrop.GetData();
+                    if (!string.IsNullOrEmpty(data))
+                        DragDrop?.Invoke(data);
 
                     break;
             }
         }
 
-        private readonly long?[] activeTouches = new long?[TouchState.MAX_TOUCH_COUNT];
+        private readonly SDL_FingerID?[] activeTouches = new SDL_FingerID?[TouchState.MAX_TOUCH_COUNT];
 
-        private TouchSource? getTouchSource(long fingerId)
+        private TouchSource? getTouchSource(SDL_FingerID fingerId)
         {
             for (int i = 0; i < activeTouches.Length; i++)
             {
@@ -221,7 +233,7 @@ namespace osu.Framework.Platform
             return null;
         }
 
-        private TouchSource? assignNextAvailableTouchSource(long fingerId)
+        private TouchSource? assignNextAvailableTouchSource(SDL_FingerID fingerId)
         {
             for (int i = 0; i < activeTouches.Length; i++)
             {
@@ -237,12 +249,12 @@ namespace osu.Framework.Platform
 
         protected virtual void HandleTouchFingerEvent(SDL_TouchFingerEvent evtTfinger)
         {
-            var existingSource = getTouchSource(evtTfinger.fingerId);
+            var existingSource = getTouchSource(evtTfinger.fingerID);
 
             if (evtTfinger.type == SDL_EventType.SDL_EVENT_FINGER_DOWN)
             {
                 Debug.Assert(existingSource == null);
-                existingSource = assignNextAvailableTouchSource(evtTfinger.fingerId);
+                existingSource = assignNextAvailableTouchSource(evtTfinger.fingerID);
             }
 
             if (existingSource == null)
@@ -276,7 +288,7 @@ namespace osu.Framework.Platform
                     break;
 
                 case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED:
-                    SDL_CloseGamepad(controllers[evtCdevice.which].ControllerHandle);
+                    SDL_CloseGamepad(controllers[evtCdevice.which].GamepadHandle);
                     controllers.Remove(evtCdevice.which);
                     break;
 
@@ -290,7 +302,7 @@ namespace osu.Framework.Platform
 
         private void handleControllerButtonEvent(SDL_GamepadButtonEvent evtCbutton)
         {
-            var button = ((SDL_GamepadButton)evtCbutton.button).ToJoystickButton();
+            var button = evtCbutton.Button.ToJoystickButton();
 
             switch (evtCbutton.type)
             {
@@ -305,23 +317,21 @@ namespace osu.Framework.Platform
         }
 
         private void handleControllerAxisEvent(SDL_GamepadAxisEvent evtCaxis) =>
-            enqueueJoystickAxisInput(((SDL_GamepadAxis)evtCaxis.axis).ToJoystickAxisSource(), evtCaxis.axisValue);
+            enqueueJoystickAxisInput(evtCaxis.Axis.ToJoystickAxisSource(), evtCaxis.value);
 
-        private void addJoystick(int which)
+        private void addJoystick(SDL_JoystickID id)
         {
-            int instanceID = SDL_JoystickGetDeviceInstanceID(which);
-
             // if the joystick is already opened, ignore it
-            if (controllers.ContainsKey(instanceID))
+            if (controllers.ContainsKey(id))
                 return;
 
-            IntPtr joystick = SDL_OpenJoystick(which);
+            var joystick = SDL_OpenJoystick(id);
 
-            IntPtr controller = IntPtr.Zero;
-            if (SDL_IsGamepad(which) == SDL_bool.SDL_TRUE)
-                controller = SDL_OpenGamepad(which);
+            SDL_Gamepad* controller = null;
+            if (SDL_IsGamepad(id) == SDL_bool.SDL_TRUE)
+                controller = SDL_OpenGamepad(id);
 
-            controllers[instanceID] = new SDL2ControllerBindings(joystick, controller);
+            controllers[id] = new SDL2ControllerBindings(joystick, controller);
         }
 
         /// <summary>
@@ -329,10 +339,12 @@ namespace osu.Framework.Platform
         /// </summary>
         private void populateJoysticks()
         {
-            for (int i = 0; i < SDL_NumJoysticks(); i++)
-            {
-                addJoystick(i);
-            }
+            var joysticks = SDL_GetJoysticks();
+            if (joysticks == null)
+                return;
+
+            for (int i = 0; i < joysticks.Count; i++)
+                addJoystick(joysticks[i]);
         }
 
         private void handleJoyDeviceEvent(SDL_JoyDeviceEvent evtJdevice)
@@ -390,29 +402,29 @@ namespace osu.Framework.Platform
             if (controllers.TryGetValue(evtJaxis.which, out var state) && state.IsJoystickAxisBound(evtJaxis.axis))
                 return;
 
-            enqueueJoystickAxisInput(JoystickAxisSource.Axis1 + evtJaxis.axis, evtJaxis.axisValue);
+            enqueueJoystickAxisInput(JoystickAxisSource.Axis1 + evtJaxis.axis, evtJaxis.axis);
         }
 
-        private uint lastPreciseScroll;
+        private ulong lastPreciseScroll;
         private const uint precise_scroll_debounce = 100;
 
         private void handleMouseWheelEvent(SDL_MouseWheelEvent evtWheel)
         {
             bool isPrecise(float f) => f % 1 != 0;
 
-            if (isPrecise(evtWheel.preciseX) || isPrecise(evtWheel.preciseY))
+            if (isPrecise(evtWheel.x) || isPrecise(evtWheel.y))
                 lastPreciseScroll = evtWheel.timestamp;
 
             bool precise = evtWheel.timestamp < lastPreciseScroll + precise_scroll_debounce;
 
             // SDL reports horizontal scroll opposite of what framework expects (in non-"natural" mode, scrolling to the right gives positive deltas while we want negative).
-            TriggerMouseWheel(new Vector2(-evtWheel.preciseX, evtWheel.preciseY), precise);
+            TriggerMouseWheel(new Vector2(-evtWheel.x, evtWheel.y), precise);
         }
 
         private void handleMouseButtonEvent(SDL_MouseButtonEvent evtButton)
         {
             MouseButton button = mouseButtonFromEvent(evtButton.button);
-            SDLButtonMask mask = (SDLButtonMask)SDL_BUTTON(evtButton.button);
+            SDLButtonMask mask = SDL_BUTTON((SDLButton)evtButton.button);
             Debug.Assert(Enum.IsDefined(mask));
 
             switch (evtButton.type)
@@ -437,20 +449,14 @@ namespace osu.Framework.Platform
                 MouseMoveRelative?.Invoke(new Vector2(evtMotion.xrel * Scale, evtMotion.yrel * Scale));
         }
 
-        protected virtual unsafe void HandleTextInputEvent(SDL_TextInputEvent evtText)
+        protected virtual void HandleTextInputEvent(SDL_TextInputEvent evtText)
         {
-            if (!SDL2Extensions.TryGetStringFromBytePointer(evtText.text, out string text))
-                return;
-
-            TriggerTextInput(text);
+            TriggerTextInput(evtText.GetText() ?? string.Empty);
         }
 
-        protected virtual unsafe void HandleTextEditingEvent(SDL_TextEditingEvent evtEdit)
+        protected virtual void HandleTextEditingEvent(SDL_TextEditingEvent evtEdit)
         {
-            if (!SDL2Extensions.TryGetStringFromBytePointer(evtEdit.text, out string text))
-                return;
-
-            TriggerTextEditing(text, evtEdit.start, evtEdit.length);
+            TriggerTextEditing(evtEdit.GetText() ?? string.Empty, evtEdit.start, evtEdit.length);
         }
 
         private void handleKeyboardEvent(SDL_KeyboardEvent evtKey)
@@ -479,7 +485,7 @@ namespace osu.Framework.Platform
 
         private MouseButton mouseButtonFromEvent(byte button)
         {
-            switch ((uint)button)
+            switch (button)
             {
                 default:
                 case SDL_BUTTON_LEFT:
@@ -499,38 +505,13 @@ namespace osu.Framework.Platform
             }
         }
 
-        /// <summary>
-        /// Button mask as returned from <see cref="SDL_GetGlobalMouseState(out int,out int)"/> and <see cref="SDL_BUTTON"/>.
-        /// </summary>
-        [Flags]
-        private enum SDLButtonMask
-        {
-            None = 0,
-
-            /// <see cref="SDL_BUTTON_LMASK"/>
-            Left = 1 << 0,
-
-            /// <see cref="SDL_BUTTON_MMASK"/>
-            Middle = 1 << 1,
-
-            /// <see cref="SDL_BUTTON_RMASK"/>
-            Right = 1 << 2,
-
-            /// <see cref="SDL_BUTTON_X1MASK"/>
-            X1 = 1 << 3,
-
-            /// <see cref="SDL_BUTTON_X2MASK"/>
-            X2 = 1 << 4
-        }
-
         #endregion
 
         /// <summary>
         /// Update the host window manager's cursor position based on a location relative to window coordinates.
         /// </summary>
         /// <param name="mousePosition">A position inside the window.</param>
-        public void UpdateMousePosition(Vector2 mousePosition) => ScheduleCommand(() =>
-            SDL_WarpMouseInWindow(SDLWindowHandle, (int)(mousePosition.X / Scale), (int)(mousePosition.Y / Scale)));
+        public void UpdateMousePosition(Vector2 mousePosition) => ScheduleCommand(() => SDL_WarpMouseInWindow(SDLWindowHandle, mousePosition.X / Scale, mousePosition.Y / Scale));
 
         private void updateConfineMode()
         {

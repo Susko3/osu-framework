@@ -7,13 +7,15 @@ using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using osuTK.Graphics;
 using osuTK.Graphics.ES30;
-using static SDL2.SDL;
+using SDL;
+using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL2
 {
-    internal class SDL2GraphicsSurface : IGraphicsSurface, IOpenGLGraphicsSurface, IMetalGraphicsSurface, ILinuxGraphicsSurface
+    internal unsafe class SDL2GraphicsSurface : IGraphicsSurface, IOpenGLGraphicsSurface, IMetalGraphicsSurface, ILinuxGraphicsSurface
     {
         private readonly SDL2Window window;
 
@@ -58,7 +60,8 @@ namespace osu.Framework.Platform.SDL2
 
         public Size GetDrawableSize()
         {
-            SDL_GetWindowSizeInPixels(window.SDLWindowHandle, out int width, out int height);
+            int width, height;
+            SDL_GetWindowSizeInPixels(window.SDLWindowHandle, &width, &height);
             return new Size(width, height);
         }
 
@@ -68,7 +71,7 @@ namespace osu.Framework.Platform.SDL2
         {
             if (RuntimeInfo.IsMobile)
             {
-                SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_PROFILE_MASK, SDL_GLprofile.SDL_GL_CONTEXT_PROFILE_ES);
+                SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_PROFILE_MASK, (int)SDL_GLprofile.SDL_GL_CONTEXT_PROFILE_ES);
 
                 // Minimum OpenGL version for ES profile:
                 SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -76,7 +79,7 @@ namespace osu.Framework.Platform.SDL2
             }
             else
             {
-                SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_PROFILE_MASK, SDL_GLprofile.SDL_GL_CONTEXT_PROFILE_CORE);
+                SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_PROFILE_MASK, (int)SDL_GLprofile.SDL_GL_CONTEXT_PROFILE_CORE);
 
                 // Minimum OpenGL version for core profile:
                 SDL_GL_SetAttribute(SDL_GLattr.SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -102,7 +105,7 @@ namespace osu.Framework.Platform.SDL2
             loadEntryPoints(new GL());
         }
 
-        private unsafe void loadEntryPoints(GraphicsBindingsBase bindings)
+        private void loadEntryPoints(GraphicsBindingsBase bindings)
         {
             var type = bindings.GetType();
             var pointsInfo = type.GetRuntimeFields().First(x => x.Name == "_EntryPointsInstance");
@@ -133,16 +136,15 @@ namespace osu.Framework.Platform.SDL2
 
         private IntPtr getProcAddress(string symbol)
         {
-            const int error_category = (int)SDL_LogCategory.SDL_LOG_CATEGORY_ERROR;
-            SDL_LogPriority oldPriority = SDL_LogGetPriority(error_category);
+            SDL_LogPriority oldPriority = SDL_LogGetPriority(SDL_LogCategory.SDL_LOG_CATEGORY_ERROR);
 
             // Prevent logging calls to SDL_GL_GetProcAddress() that fail on systems which don't have the requested symbol (typically macOS).
-            SDL_LogSetPriority(error_category, SDL_LogPriority.SDL_LOG_PRIORITY_INFO);
+            SDL_LogSetPriority(SDL_LogCategory.SDL_LOG_CATEGORY_ERROR, SDL_LogPriority.SDL_LOG_PRIORITY_INFO);
 
-            IntPtr ret = SDL_GL_GetProcAddress(symbol);
+            IntPtr ret = SDL_GL_GetProcAddress(Encoding.UTF8.GetBytes(symbol));
 
             // Reset the logging behaviour.
-            SDL_LogSetPriority(error_category, oldPriority);
+            SDL_LogSetPriority(SDL_LogCategory.SDL_LOG_CATEGORY_ERROR, oldPriority);
 
             return ret;
         }
@@ -151,16 +153,18 @@ namespace osu.Framework.Platform.SDL2
         {
             get
             {
-                if (window.SDLWindowHandle == IntPtr.Zero)
+                if (window.SDLWindowHandle == null)
                     return null;
 
-                var wmInfo = window.GetWindowSystemInformation();
+                // TODO: https://github.com/libsdl-org/SDL/issues/9430
 
-                switch (wmInfo.subsystem)
-                {
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_UIKIT:
-                        return (int)wmInfo.info.uikit.framebuffer;
-                }
+                // var wmInfo = window.GetWindowSystemInformation();
+                //
+                // switch (wmInfo.subsystem)
+                // {
+                //     case SDL_SYSWM_TYPE.SDL_SYSWM_UIKIT:
+                //         return (int)wmInfo.info.uikit.framebuffer;
+                // }
 
                 return null;
             }
@@ -177,7 +181,9 @@ namespace osu.Framework.Platform.SDL2
                 if (verticalSync != null)
                     return verticalSync.Value;
 
-                return (verticalSync = SDL_GL_GetSwapInterval() != 0).Value;
+                int interval;
+                SDL_GL_GetSwapInterval(&interval);
+                return (verticalSync = interval != 0).Value;
             }
             set
             {

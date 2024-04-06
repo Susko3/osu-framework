@@ -3,8 +3,9 @@
 
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using JetBrains.Annotations;
+using System.Text;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
@@ -13,20 +14,21 @@ using osu.Framework.Extensions.ImageExtensions;
 using osu.Framework.Logging;
 using osu.Framework.Platform.SDL2;
 using osu.Framework.Threading;
+using SDL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
 using Point = System.Drawing.Point;
-using static SDL2.SDL;
+using static SDL.SDL3;
 
 namespace osu.Framework.Platform
 {
     /// <summary>
     /// Default implementation of a window, using SDL for windowing and graphics support.
     /// </summary>
-    internal abstract partial class SDL2Window : IWindow
+    internal abstract unsafe partial class SDL2Window : IWindow
     {
-        internal IntPtr SDLWindowHandle { get; private set; } = IntPtr.Zero;
+        internal SDL_Window* SDLWindowHandle { get; private set; }
 
         private readonly SDL2GraphicsSurface graphicsSurface;
         IGraphicsSurface IWindow.GraphicsSurface => graphicsSurface;
@@ -69,23 +71,14 @@ namespace osu.Framework.Platform
             set
             {
                 title = value;
-                ScheduleCommand(() => SDL_SetWindowTitle(SDLWindowHandle, title));
+                ScheduleCommand(() => SDL_SetWindowTitle(SDLWindowHandle, Encoding.UTF8.GetBytes(title)));
             }
         }
 
         /// <summary>
         /// Whether the current display server is Wayland.
         /// </summary>
-        internal bool IsWayland
-        {
-            get
-            {
-                if (SDLWindowHandle == IntPtr.Zero)
-                    return false;
-
-                return GetWindowSystemInformation().subsystem == SDL_SYSWM_TYPE.SDL_SYSWM_WAYLAND;
-            }
-        }
+        internal bool IsWayland => SDL_GetCurrentVideoDriver() == "wayland";
 
         /// <summary>
         /// Gets the native window handle as provided by the operating system.
@@ -94,38 +87,35 @@ namespace osu.Framework.Platform
         {
             get
             {
-                if (SDLWindowHandle == IntPtr.Zero)
+                if (SDLWindowHandle == null)
                     return IntPtr.Zero;
 
-                var wmInfo = GetWindowSystemInformation();
+                var props = SDL_GetWindowProperties(SDLWindowHandle);
 
-                // Window handle is selected per subsystem as defined at:
-                // https://wiki.libsdl.org/SDL_SysWMinfo
-                switch (wmInfo.subsystem)
+                switch (RuntimeInfo.OS)
                 {
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_WINDOWS:
-                        return wmInfo.info.win.window;
+                    case RuntimeInfo.Platform.Windows:
+                        return SDL_GetProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, IntPtr.Zero);
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_X11:
-                        return wmInfo.info.x11.window;
+                    case RuntimeInfo.Platform.Linux:
+                        if (IsWayland)
+                            return SDL_GetProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, IntPtr.Zero);
+                        if (SDL_GetCurrentVideoDriver() == "x11")
+                            return SDL_GetProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, IntPtr.Zero);
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_DIRECTFB:
-                        return wmInfo.info.dfb.window;
+                        return IntPtr.Zero;
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_COCOA:
-                        return wmInfo.info.cocoa.window;
+                    case RuntimeInfo.Platform.macOS:
+                        return SDL_GetProperty(props, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, IntPtr.Zero);
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_UIKIT:
-                        return wmInfo.info.uikit.window;
+                    case RuntimeInfo.Platform.iOS:
+                        return SDL_GetProperty(props, SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, IntPtr.Zero);
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_WAYLAND:
-                        return wmInfo.info.wl.surface;
-
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_ANDROID:
-                        return wmInfo.info.android.window;
+                    case RuntimeInfo.Platform.Android:
+                        return SDL_GetProperty(props, SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, IntPtr.Zero);
 
                     default:
-                        return IntPtr.Zero;
+                        throw new ArgumentOutOfRangeException();
                 }
             }
         }
@@ -134,48 +124,21 @@ namespace osu.Framework.Platform
         {
             get
             {
-                if (SDLWindowHandle == IntPtr.Zero)
+                if (SDLWindowHandle == null)
                     return IntPtr.Zero;
 
-                var wmInfo = GetWindowSystemInformation();
+                var props = SDL_GetWindowProperties(SDLWindowHandle);
 
-                switch (wmInfo.subsystem)
-                {
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_X11:
-                        return wmInfo.info.x11.display;
+                if (IsWayland)
+                    return SDL_GetProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, IntPtr.Zero);
+                if (SDL_GetCurrentVideoDriver() == "x11")
+                    return SDL_GetProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, IntPtr.Zero);
 
-                    case SDL_SYSWM_TYPE.SDL_SYSWM_WAYLAND:
-                        return wmInfo.info.wl.display;
-
-                    default:
-                        return IntPtr.Zero;
-                }
+                return IntPtr.Zero;
             }
         }
 
-        internal SDL_SysWMinfo GetWindowSystemInformation()
-        {
-            if (SDLWindowHandle == IntPtr.Zero)
-                return default;
-
-            var wmInfo = new SDL_SysWMinfo();
-            SDL_GetVersion(out wmInfo.version);
-            SDL_GetWindowWMInfo(SDLWindowHandle, ref wmInfo);
-            return wmInfo;
-        }
-
         public bool CapsLockPressed => SDL_GetModState().HasFlagFast(SDL_Keymod.SDL_KMOD_CAPS);
-
-        // references must be kept to avoid GC, see https://stackoverflow.com/a/6193914
-
-        [UsedImplicitly]
-        private SDL_LogOutputFunction logOutputDelegate;
-
-        [UsedImplicitly]
-        private SDL_EventFilter? eventFilterDelegate;
-
-        [UsedImplicitly]
-        private SDL_EventFilter? eventWatchDelegate;
 
         /// <summary>
         /// Represents a handle to this <see cref="SDL2Window"/> instance, used for unmanaged callbacks.
@@ -186,13 +149,13 @@ namespace osu.Framework.Platform
         {
             ObjectHandle = new ObjectHandle<SDL2Window>(this, GCHandleType.Normal);
 
-            if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0)
+            if (SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_GAMEPAD) < 0)
             {
                 throw new InvalidOperationException($"Failed to initialise SDL: {SDL_GetError()}");
             }
 
-            SDL_LogSetPriority((int)SDL_LogCategory.SDL_LOG_CATEGORY_ERROR, SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG);
-            SDL_SetLogOutputFunction(logOutputDelegate = logOutput, IntPtr.Zero);
+            SDL_LogSetPriority(SDL_LogCategory.SDL_LOG_CATEGORY_ERROR, SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG);
+            SDL_SetLogOutputFunction(&logOutput, IntPtr.Zero);
 
             graphicsSurface = new SDL2GraphicsSurface(this, surfaceType);
 
@@ -205,13 +168,10 @@ namespace osu.Framework.Platform
             populateJoysticks();
         }
 
-        [MonoPInvokeCallback(typeof(SDL_LogOutputFunction))]
-        private static void logOutput(IntPtr _, int categoryInt, SDL_LogPriority priority, IntPtr messagePtr)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static void logOutput(IntPtr _, SDL_LogCategory category, SDL_LogPriority priority, byte* messagePtr)
         {
-            var category = (SDL_LogCategory)categoryInt;
-            string? message = Marshal.PtrToStringUTF8(messagePtr);
-
-            Logger.Log($@"SDL {category.ReadableName()} log [{priority.ReadableName()}]: {message}");
+            Logger.Log($@"SDL {category.ReadableName()} log [{priority.ReadableName()}]: {PtrToStringUTF8(messagePtr)}");
         }
 
         public void SetupWindow(FrameworkConfigManager config)
@@ -229,20 +189,20 @@ namespace osu.Framework.Platform
             flags |= WindowState.ToFlags();
             flags |= graphicsSurface.Type.ToFlags();
 
-            SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "1");
-            SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
-            SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "0");
-            SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0"); // disable touch events generating synthetic mouse events on desktop platforms
-            SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0"); // disable mouse events generating synthetic touch events on mobile platforms
+            SDL_SetHint(SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "1"u8);
+            SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1"u8);
+            SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "0"u8);
+            SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0"u8); // disable touch events generating synthetic mouse events on desktop platforms
+            SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0"u8); // disable mouse events generating synthetic touch events on mobile platforms
 
             // we want text input to only be active when SDL2DesktopWindowTextInput is active.
             // SDL activates it by default on some platforms: https://github.com/libsdl-org/SDL/blob/release-2.0.16/src/video/SDL_video.c#L573-L582
             // so we deactivate it on startup.
             SDL_StopTextInput();
 
-            SDLWindowHandle = SDL_CreateWindow(title, Position.X, Position.Y, Size.Width, Size.Height, flags);
+            SDLWindowHandle = SDL_CreateWindow(Encoding.UTF8.GetBytes(title), Size.Width, Size.Height, flags);
 
-            if (SDLWindowHandle == IntPtr.Zero)
+            if (SDLWindowHandle == null)
                 throw new InvalidOperationException($"Failed to create SDL window. SDL Error: {SDL_GetError()}");
 
             graphicsSurface.Initialise();
@@ -254,10 +214,10 @@ namespace osu.Framework.Platform
         /// <summary>
         /// Starts the window's run loop.
         /// </summary>
-        public void Run()
+        public virtual void Run()
         {
-            SDL_SetEventFilter(eventFilterDelegate = eventFilter, ObjectHandle.Handle);
-            SDL_AddEventWatch(eventWatchDelegate = eventWatch, ObjectHandle.Handle);
+            SDL_SetEventFilter(&eventFilter, ObjectHandle.Handle);
+            SDL_AddEventWatch(&eventWatch, ObjectHandle.Handle);
 
             RunMainLoop();
         }
@@ -305,13 +265,25 @@ namespace osu.Framework.Platform
         }
 
         /// <summary>
+        /// Drop event from SDL event queue.
+        /// </summary>
+        /// <remarks>Return value of <see cref="HandleEventFromFilter"/></remarks>
+        protected const int DROP_EVENT = 0;
+
+        /// <summary>
+        /// Keep event in SDL event queue (it'll get processed later in <see cref="pollSDLEvents"/>).
+        /// </summary>
+        /// <remarks>Return value of <see cref="HandleEventFromFilter"/></remarks>
+        protected const int KEEP_EVENT = 1;
+
+        /// <summary>
         /// Handles <see cref="SDL_Event"/>s fired from the SDL event filter.
         /// </summary>
         /// <remarks>
         /// As per SDL's recommendation, application events should always be handled via the event filter.
         /// See: https://wiki.libsdl.org/SDL2/SDL_EventType#android_ios_and_winrt_events
         /// </remarks>
-        protected virtual void HandleEventFromFilter(SDL_Event evt)
+        protected virtual int HandleEventFromFilter(SDL_Event evt)
         {
             switch (evt.type)
             {
@@ -331,37 +303,33 @@ namespace osu.Framework.Platform
                     LowOnMemory?.Invoke();
                     break;
             }
+
+            return KEEP_EVENT;
         }
 
         protected void HandleEventFromWatch(SDL_Event evt)
         {
-            switch (evt.type)
-            {
-                case SDL_EventType.SDL_WINDOWEVENT:
-                    // polling via SDL_PollEvent blocks on resizes (https://stackoverflow.com/a/50858339)
-                    if (evt.window.windowEvent == SDL_WindowEventID.SDL_EVENT_WINDOW_RESIZED && !updatingWindowStateAndSize)
-                        fetchWindowSize();
-
-                    break;
-            }
+            // polling via SDL_PollEvent blocks on resizes (https://stackoverflow.com/a/50858339)
+            if (evt.type == SDL_EventType.SDL_EVENT_WINDOW_RESIZED && !updatingWindowStateAndSize)
+                fetchWindowSize();
         }
 
-        [MonoPInvokeCallback(typeof(SDL_EventFilter))]
-        private static int eventFilter(IntPtr userdata, IntPtr eventPtr)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static int eventFilter(IntPtr userdata, SDL_Event* eventPtr)
         {
             var handle = new ObjectHandle<SDL2Window>(userdata);
             if (handle.GetTarget(out SDL2Window window))
-                window.HandleEventFromFilter(Marshal.PtrToStructure<SDL_Event>(eventPtr));
+                return window.HandleEventFromFilter(*eventPtr);
 
-            return 1;
+            return KEEP_EVENT;
         }
 
-        [MonoPInvokeCallback(typeof(SDL_EventFilter))]
-        private static int eventWatch(IntPtr userdata, IntPtr eventPtr)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static int eventWatch(IntPtr userdata, SDL_Event* eventPtr)
         {
             var handle = new ObjectHandle<SDL2Window>(userdata);
             if (handle.GetTarget(out SDL2Window window))
-                window.HandleEventFromWatch(Marshal.PtrToStructure<SDL_Event>(eventPtr));
+                window.HandleEventFromWatch(*eventPtr);
 
             return 1;
         }
@@ -389,17 +357,17 @@ namespace osu.Framework.Platform
             }
             else
             {
-                if (SDLWindowHandle != IntPtr.Zero)
+                if (SDLWindowHandle != null)
                 {
                     SDL_DestroyWindow(SDLWindowHandle);
-                    SDLWindowHandle = IntPtr.Zero;
+                    SDLWindowHandle = null;
                 }
             }
         }
 
         public void Raise() => ScheduleCommand(() =>
         {
-            var flags = (SDL_WindowFlags)SDL_GetWindowFlags(SDLWindowHandle);
+            var flags = SDL_GetWindowFlags(SDLWindowHandle);
 
             if (flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MINIMIZED))
                 SDL_RestoreWindow(SDLWindowHandle);
@@ -442,7 +410,7 @@ namespace osu.Framework.Platform
         /// Attempts to set the window's icon to the specified image.
         /// </summary>
         /// <param name="image">An <see cref="Image{Rgba32}"/> to set as the window icon.</param>
-        private unsafe void setSDLIcon(Image<Rgba32> image)
+        private void setSDLIcon(Image<Rgba32> image)
         {
             var pixelMemory = image.CreateReadOnlyPixelMemory();
             var imageSize = image.Size;
@@ -451,9 +419,13 @@ namespace osu.Framework.Platform
             {
                 var pixelSpan = pixelMemory.Span;
 
-                IntPtr surface;
+                SDL_Surface* surface;
+
                 fixed (Rgba32* ptr = pixelSpan)
-                    surface = SDL_CreateRGBSurfaceFrom(new IntPtr(ptr), imageSize.Width, imageSize.Height, 32, imageSize.Width * 4, 0xff, 0xff00, 0xff0000, 0xff000000);
+                {
+                    var pixelFormat = SDL_GetPixelFormatEnumForMasks(32, 0xff, 0xff00, 0xff0000, 0xff000000);
+                    surface = SDL_CreateSurfaceFrom(new IntPtr(ptr), imageSize.Width, imageSize.Height, imageSize.Width * 4, pixelFormat);
+                }
 
                 SDL_SetWindowIcon(SDLWindowHandle, surface);
                 SDL_DestroySurface(surface);
@@ -470,6 +442,8 @@ namespace osu.Framework.Platform
 
         protected void ScheduleCommand(Action action) => commandScheduler.Add(action, false);
 
+        protected void ScheduleCommand<T>(Action<T> action, T data) => commandScheduler.Add(action, data, false);
+
         private const int events_per_peep = 64;
         private readonly SDL_Event[] events = new SDL_Event[events_per_peep];
 
@@ -484,29 +458,35 @@ namespace osu.Framework.Platform
 
             do
             {
-                eventsRead = SDL_PeepEvents(events, events_per_peep, SDL_eventaction.SDL_GETEVENT, SDL_EventType.SDL_EVENT_FIRST, SDL_EventType.SDL_EVENT_LAST);
+                fixed (SDL_Event* buf = events)
+                    eventsRead = SDL_PeepEvents(buf, events_per_peep, SDL_eventaction.SDL_GETEVENT, SDL_EventType.SDL_EVENT_FIRST, SDL_EventType.SDL_EVENT_LAST);
+
                 for (int i = 0; i < eventsRead; i++)
                     HandleEvent(events[i]);
             } while (eventsRead == events_per_peep);
         }
 
         /// <summary>
-        /// Handles <see cref="SDL_Event"/>s polled on the main thread.
+        /// Handles <see cref="SDL_Event"/>s polled on the main or raw input (Windows only) thread.
         /// </summary>
-        protected virtual void HandleEvent(SDL_Event e)
+        protected void HandleEvent(SDL_Event e)
         {
+            if (e.type is >= SDL_EventType.SDL_EVENT_DISPLAY_FIRST and <= SDL_EventType.SDL_EVENT_DISPLAY_LAST)
+            {
+                handleDisplayEvent(e.display);
+                return;
+            }
+
+            if (e.type is >= SDL_EventType.SDL_EVENT_WINDOW_FIRST and <= SDL_EventType.SDL_EVENT_WINDOW_LAST)
+            {
+                handleWindowEvent(e.window);
+                return;
+            }
+
             switch (e.type)
             {
                 case SDL_EventType.SDL_EVENT_QUIT:
                     handleQuitEvent(e.quit);
-                    break;
-
-                case SDL_EventType.SDL_DISPLAYEVENT:
-                    handleDisplayEvent(e.display);
-                    break;
-
-                case SDL_EventType.SDL_WINDOWEVENT:
-                    handleWindowEvent(e.window);
                     break;
 
                 case SDL_EventType.SDL_EVENT_KEY_DOWN:
@@ -562,18 +542,18 @@ namespace osu.Framework.Platform
                     break;
 
                 case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION:
-                    handleControllerAxisEvent(e.caxis);
+                    handleControllerAxisEvent(e.gaxis);
                     break;
 
                 case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN:
                 case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_UP:
-                    handleControllerButtonEvent(e.cbutton);
+                    handleControllerButtonEvent(e.gbutton);
                     break;
 
                 case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED:
                 case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED:
                 case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED:
-                    handleControllerDeviceEvent(e.cdevice);
+                    handleControllerDeviceEvent(e.gdevice);
                     break;
 
                 case SDL_EventType.SDL_EVENT_FINGER_DOWN:

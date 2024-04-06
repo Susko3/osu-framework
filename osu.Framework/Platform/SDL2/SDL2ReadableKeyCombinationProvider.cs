@@ -4,7 +4,8 @@
 using System.Globalization;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
-using static SDL2.SDL;
+using SDL;
+using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL2
 {
@@ -18,7 +19,7 @@ namespace osu.Framework.Platform.SDL2
             if (keycode == SDL_Keycode.SDLK_UNKNOWN)
                 return base.GetReadableKey(key);
 
-            string name;
+            string? name;
 
             // overrides for some keys that we want displayed differently from SDL_GetKeyName().
             if (TryGetNameFromKeycode(keycode, out name))
