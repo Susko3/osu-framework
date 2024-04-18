@@ -15,7 +15,9 @@ using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Handlers;
 using osu.Framework.Input.Handlers.Mouse;
+using osu.Framework.Platform.SDL;
 using osu.Framework.Platform.Windows.Native;
+using SixLabors.ImageSharp.Formats.Bmp;
 
 namespace osu.Framework.Platform.Windows
 {
@@ -24,7 +26,7 @@ namespace osu.Framework.Platform.Windows
     {
         private TimePeriod? timePeriod;
 
-        protected override Clipboard CreateClipboard() => new WindowsClipboard();
+        protected override Clipboard CreateClipboard() => new SDL3Clipboard(BmpFormat.Instance);
 
         protected override ReadableKeyCombinationProvider CreateReadableKeyCombinationProvider() => new WindowsReadableKeyCombinationProvider();
 
