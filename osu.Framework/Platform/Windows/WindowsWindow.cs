@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Input.Handlers.Mouse;
+using osu.Framework.Logging;
 using osu.Framework.Platform.SDL;
 using osu.Framework.Platform.Windows.Native;
 using osuTK;
@@ -213,6 +214,17 @@ namespace osu.Framework.Platform.Windows
 
         #endregion
 
+        protected override void HandleMouseMotionEvent(SDL_MouseMotionEvent evtMotion)
+        {
+            if (RelativeMouseMode && evtMotion.which == SDL3.SDL_PEN_MOUSEID)
+            {
+                synthesizeMouseEventFromTablet(evtMotion.x, evtMotion.y);
+                return;
+            }
+
+            base.HandleMouseMotionEvent(evtMotion);
+        }
+
         protected override void HandleTouchFingerEvent(SDL_TouchFingerEvent evtTfinger)
         {
             if (evtTfinger.TryGetTouchName(out string? name) && name == "pen")
@@ -221,7 +233,7 @@ namespace osu.Framework.Platform.Windows
                 // InputManager expects to receive this as mouse events, to have proper `mouseSource` input priority (see InputManager.GetPendingInputs)
                 // osu! expects to get tablet events as mouse events, and touch events as touch events for touch device (TD mod) handling (see https://github.com/ppy/osu/issues/25590)
 
-                TriggerMouseMove(evtTfinger.x * ClientSize.Width, evtTfinger.y * ClientSize.Height);
+                synthesizeMouseEventFromTablet(evtTfinger.x * ClientSize.Width, evtTfinger.y * ClientSize.Height);
 
                 switch (evtTfinger.type)
                 {
@@ -239,6 +251,13 @@ namespace osu.Framework.Platform.Windows
 
             base.HandleTouchFingerEvent(evtTfinger);
         }
+
+        private void synthesizeMouseEventFromTablet(float x, float y)
+        {
+            TabletMouseEvent?.Invoke(new Vector2(x, y));
+        }
+
+        public Action<Vector2>? TabletMouseEvent;
 
         public override Size Size
         {

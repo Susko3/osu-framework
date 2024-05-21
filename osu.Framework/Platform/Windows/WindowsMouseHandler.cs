@@ -3,6 +3,7 @@
 
 using System.Runtime.Versioning;
 using osu.Framework.Input.Handlers.Mouse;
+using osu.Framework.Input.StateChanges;
 using osuTK;
 
 namespace osu.Framework.Platform.Windows
@@ -22,7 +23,45 @@ namespace osu.Framework.Platform.Windows
                 return false;
 
             window = desktopWindow;
+
+            Enabled.BindValueChanged(e =>
+            {
+                if (e.NewValue)
+                {
+                    window.TabletMouseEvent += handleTabletMouseEvent;
+                }
+                else
+                {
+                    window.TabletMouseEvent -= handleTabletMouseEvent;
+                }
+            }, true);
+
             return base.Initialize(host);
+        }
+
+        private void handleTabletMouseEvent(Vector2 position)
+        {
+            AbsolutePositionReceived = true;
+
+            if (window.RelativeMouseMode && Sensitivity.Value != 1)
+            {
+                var displayBounds = window.CurrentDisplayBindable.Value.Bounds;
+                var displayPosition = new Vector2(displayBounds.X, displayBounds.Y);
+                var windowPositionOnDisplay = new Vector2(window.Position.X, window.Position.Y) - displayPosition;
+
+                position += windowPositionOnDisplay;
+
+                // apply absolute sensitivity adjustment from the centre of the current display.
+                Vector2 halfDisplaySize = new Vector2(displayBounds.Width, displayBounds.Height) / 2;
+
+                position -= halfDisplaySize;
+                position *= (float)Sensitivity.Value;
+                position += halfDisplaySize;
+
+                position -= windowPositionOnDisplay;
+            }
+
+            EnqueueInput(new MousePositionAbsoluteInput { Position = position });
         }
 
         public override void FeedbackMousePositionChange(Vector2 position, bool isSelfFeedback)
