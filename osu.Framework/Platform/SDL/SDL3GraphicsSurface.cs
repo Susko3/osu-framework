@@ -135,15 +135,15 @@ namespace osu.Framework.Platform.SDL
         private IntPtr getProcAddress(string symbol)
         {
             const SDL_LogCategory error_category = SDL_LogCategory.SDL_LOG_CATEGORY_ERROR;
-            SDL_LogPriority oldPriority = SDL3.SDL_LogGetPriority(error_category);
+            SDL_LogPriority oldPriority = SDL3.SDL_GetLogPriority(error_category);
 
             // Prevent logging calls to SDL_GL_GetProcAddress() that fail on systems which don't have the requested symbol (typically macOS).
-            SDL3.SDL_LogSetPriority(error_category, SDL_LogPriority.SDL_LOG_PRIORITY_INFO);
+            SDL3.SDL_SetLogPriority(error_category, SDL_LogPriority.SDL_LOG_PRIORITY_INFO);
 
             IntPtr ret = SDL3.SDL_GL_GetProcAddress(symbol);
 
             // Reset the logging behaviour.
-            SDL3.SDL_LogSetPriority(error_category, oldPriority);
+            SDL3.SDL_SetLogPriority(error_category, oldPriority);
 
             return ret;
         }

@@ -18,7 +18,7 @@ namespace osu.Framework.Platform.SDL
         {
             // Apple devices don't have the notion of NumLock (they have a Clear key instead).
             // treat them as if they always have NumLock on (the numpad always performs its primary actions).
-            bool numLockOn = sdlKeysym.Mod.HasFlagFast(SDL_Keymod.SDL_KMOD_NUM) || RuntimeInfo.IsApple;
+            bool numLockOn = sdlKeysym.mod.HasFlagFast(SDL_Keymod.SDL_KMOD_NUM) || RuntimeInfo.IsApple;
 
             switch (sdlKeysym.scancode)
             {
