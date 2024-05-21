@@ -447,7 +447,7 @@ namespace osu.Framework.Platform
             }
         }
 
-        private void handleMouseMotionEvent(SDL_MouseMotionEvent evtMotion)
+        protected virtual void HandleMouseMotionEvent(SDL_MouseMotionEvent evtMotion)
         {
             if (SDL3.SDL_GetRelativeMouseMode() == SDL_bool.SDL_FALSE)
                 MouseMove?.Invoke(new Vector2(evtMotion.x * Scale, evtMotion.y * Scale));

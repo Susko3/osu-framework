@@ -513,7 +513,7 @@ namespace osu.Framework.Platform
                     break;
 
                 case SDL_EventType.SDL_EVENT_MOUSE_MOTION:
-                    handleMouseMotionEvent(e.motion);
+                    HandleMouseMotionEvent(e.motion);
                     break;
 
                 case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN:

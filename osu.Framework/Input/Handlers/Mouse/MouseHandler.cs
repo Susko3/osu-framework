@@ -53,7 +53,7 @@ namespace osu.Framework.Input.Handlers.Mouse
         /// Whether a non-relative mouse event has ever been received.
         /// This is used as a starting location for relative movement.
         /// </summary>
-        private bool absolutePositionReceived;
+        protected bool AbsolutePositionReceived;
 
         /// <summary>
         /// Whether the application should be handling the cursor.
@@ -190,7 +190,7 @@ namespace osu.Framework.Input.Handlers.Mouse
                 // check whether the consumer has requested to use relative mode when feasible.
                 && UseRelativeMode.Value
                 // relative mode requires at least one absolute input to arrive, to gain an additional position to work with.
-                && absolutePositionReceived
+                && AbsolutePositionReceived
                 // relative mode only works when the window is active and the cursor is contained. aka the OS cursor isn't being displayed outside the window.
                 && cursorCaptured
                 // relative mode shouldn't ever be enabled if the framework or a consumer has chosen not to hide the cursor.
@@ -202,22 +202,22 @@ namespace osu.Framework.Input.Handlers.Mouse
 
         protected virtual void HandleMouseMove(Vector2 position)
         {
-            absolutePositionReceived = true;
-            enqueueInput(new MousePositionAbsoluteInput { Position = position });
+            AbsolutePositionReceived = true;
+            EnqueueInput(new MousePositionAbsoluteInput { Position = position });
         }
 
         protected virtual void HandleMouseMoveRelative(Vector2 delta)
         {
-            enqueueInput(new MousePositionRelativeInput { Delta = delta * (float)Sensitivity.Value });
+            EnqueueInput(new MousePositionRelativeInput { Delta = delta * (float)Sensitivity.Value });
         }
 
-        private void handleMouseDown(MouseButton button) => enqueueInput(new MouseButtonInput(button, true));
+        private void handleMouseDown(MouseButton button) => EnqueueInput(new MouseButtonInput(button, true));
 
-        private void handleMouseUp(MouseButton button) => enqueueInput(new MouseButtonInput(button, false));
+        private void handleMouseUp(MouseButton button) => EnqueueInput(new MouseButtonInput(button, false));
 
-        private void handleMouseWheel(Vector2 delta, bool precise) => enqueueInput(new MouseScrollRelativeInput { Delta = delta, IsPrecise = precise });
+        private void handleMouseWheel(Vector2 delta, bool precise) => EnqueueInput(new MouseScrollRelativeInput { Delta = delta, IsPrecise = precise });
 
-        private void enqueueInput(IInput input)
+        protected void EnqueueInput(IInput input)
         {
             PendingInputs.Enqueue(input);
             FrameStatistics.Increment(StatisticsCounterType.MouseEvents);
