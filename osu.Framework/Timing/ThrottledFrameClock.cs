@@ -90,15 +90,7 @@ namespace osu.Framework.Timing
 
             double before = CurrentTime;
 
-            TimeSpan timeSpan = TimeSpan.FromMilliseconds(milliseconds);
-
-            if (!waitWaitableTimer(timeSpan))
-            {
-                if (FrameworkEnvironment.UseSDL3)
-                    SDL3.SDL_DelayNS((ulong)(milliseconds * SDL3.SDL_NS_PER_MS));
-                else
-                    Thread.Sleep(timeSpan);
-            }
+            SDL3.SDL_DelayNS((ulong)(milliseconds * SDL3.SDL_NS_PER_MS));
 
             return (CurrentTime = SourceTime) - before;
         }
