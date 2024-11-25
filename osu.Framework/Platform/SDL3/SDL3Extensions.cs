@@ -1,12 +1,16 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
+using osu.Framework.Platform.SDL3.Native;
 using osuTK.Input;
 using SDL;
 using static SDL.SDL3;
@@ -1010,6 +1014,17 @@ namespace osu.Framework.Platform.SDL3
                 w = rectangle.Width,
             };
 
+        public static SDL_Rect ToSDLRect(this Rectangle rectangle) =>
+            new SDL_Rect
+            {
+                x = rectangle.X,
+                y = rectangle.Y,
+                h = rectangle.Height,
+                w = rectangle.Width,
+            };
+
+        public static Rectangle ToRectangle(this SDL_Rect rect) => new Rectangle(rect.x, rect.y, rect.w, rect.h);
+
         public static unsafe DisplayMode ToDisplayMode(this SDL_DisplayMode mode, int displayIndex)
         {
             int bpp;
@@ -1109,6 +1124,57 @@ namespace osu.Framework.Platform.SDL3
         {
             name = SDL_GetTouchDeviceName(e.touchID);
             return name != null;
+        }
+
+        [DoesNotReturn]
+        private static void throwFailed(string? expression)
+        {
+            string? error = SDL_GetError();
+
+            if (error == "That operation is not supported")
+                throw new NotSupportedException($"Not supported: {expression}");
+
+            const string start = "Parameter '";
+            const string end = "' is invalid";
+
+            if (error != null && error.StartsWith(start, StringComparison.Ordinal) && error.EndsWith(end, StringComparison.Ordinal))
+            {
+                string paramName = error[start.Length..^end.Length];
+                throw new ArgumentException($"Invalid parameter when calling {expression}", paramName);
+            }
+
+            throw new SDLException($"SDL error when calling {expression}", error);
+        }
+
+        public static void ThrowIfFailed(this SDLBool returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
+        {
+            if (!returnValue)
+                throwFailed(expression);
+        }
+
+        public static float ThrowIfFailed(this float returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
+        {
+            if (returnValue == 0.0f)
+                throwFailed(expression);
+
+            return returnValue;
+        }
+
+        public static T ThrowIfFailed<T>(this T returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
+            where T : unmanaged, Enum
+        {
+            if (EqualityComparer<T>.Default.Equals(returnValue, default))
+                throwFailed(expression);
+
+            return returnValue;
+        }
+
+        public static string ThrowIfFailed(this string? returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
+        {
+            if (returnValue == null)
+                throwFailed(expression);
+
+            return returnValue;
         }
     }
 }
