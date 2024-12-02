@@ -17,7 +17,7 @@ namespace osu.Framework.Platform.SDL3
 {
     internal unsafe class SDL3GraphicsSurface : IGraphicsSurface, IOpenGLGraphicsSurface, IMetalGraphicsSurface, ILinuxGraphicsSurface, IAndroidGraphicsSurface
     {
-        private readonly ISDL3Window window;
+        private readonly SDL3Window window;
 
         private SDL_GLContextState* context;
 
@@ -25,7 +25,7 @@ namespace osu.Framework.Platform.SDL3
 
         public GraphicsSurfaceType Type { get; }
 
-        public SDL3GraphicsSurface(ISDL3Window window, GraphicsSurfaceType surfaceType)
+        public SDL3GraphicsSurface(SDL3Window window, GraphicsSurfaceType surfaceType)
         {
             this.window = window;
             Type = surfaceType;
