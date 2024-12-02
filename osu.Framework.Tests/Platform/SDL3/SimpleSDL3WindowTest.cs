@@ -38,8 +38,8 @@ namespace osu.Framework.Tests.Platform.SDL3
 
         public static TestCaseData[] SetAndGetCases =
         [
-            Create(nameof(IReadOnlyNativeState.TextInputParams), default(TextInputParams?)),
-            Create(nameof(IReadOnlyNativeState.TextInputParams),
+            Create<TextInputParams?>(nameof(IReadOnlyNativeState.TextInputParams), null),
+            Create<TextInputParams?>(nameof(IReadOnlyNativeState.TextInputParams),
                 new TextInputParams(SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_EMAIL, SDL_Capitalization.SDL_CAPITALIZE_LETTERS, true, true, new Rectangle(10, 20, 50, 60), 6)),
             Create(nameof(IReadOnlyNativeState.RelativeMouseMode), true),
             Create(nameof(IReadOnlyNativeState.RelativeMouseMode), false),
@@ -62,8 +62,8 @@ namespace osu.Framework.Tests.Platform.SDL3
             Create(nameof(IReadOnlyNativeState.WindowState), NativeState.Maximised, newState => newState.SetResizable(true)),
             Create(nameof(IReadOnlyNativeState.Fullscreen), true),
             Create(nameof(IReadOnlyNativeState.Fullscreen), false),
-            Create(nameof(IReadOnlyNativeState.MouseRect), default(Rectangle?)),
-            Create(nameof(IReadOnlyNativeState.MouseRect), new Rectangle(10, 10, 20, 30)),
+            Create<Rectangle?>(nameof(IReadOnlyNativeState.MouseRect), null),
+            Create<Rectangle?>(nameof(IReadOnlyNativeState.MouseRect), new Rectangle(10, 10, 20, 30)),
             Create(nameof(IReadOnlyNativeState.Opacity), 1.0f),
             Create(nameof(IReadOnlyNativeState.Opacity), 0.7f),
             Create(nameof(IReadOnlyNativeState.Opacity), 0.0f),
@@ -134,6 +134,6 @@ namespace osu.Framework.Tests.Platform.SDL3
             return (T)typeof(IReadOnlyNativeState).GetProperty(getter)!.GetValue(state)!;
         }
 
-        public override string ToString() => $"{getter}, {Value}";
+        public override string ToString() => $"{getter}, {(Value != null ? Value : "<null>")}";
     }
 }
