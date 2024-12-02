@@ -7,13 +7,12 @@ using osu.Framework.Platform.SDL3.Native;
 
 namespace osu.Framework.Tests.Platform.SDL3
 {
-    [TestFixture]
     public class NativeStateTests : SDLTest
     {
         [Test]
         public void TestEquality()
         {
-            var window = new BaseSDL3Window(new NativeStateStorage
+            using var window = new BaseSDL3Window(new NativeStateStorage
             {
                 Visible = { Value = false },
             });
@@ -23,9 +22,17 @@ namespace osu.Framework.Tests.Platform.SDL3
 
             PollEvents(window.HandleEvent);
 
+            window.UnsafeGetWriteableState().SetVisible(true);
+
+            PollEvents(window.HandleEvent);
+            PollEvents(window.HandleEvent);
+
             var nativeState = window.UnsafeGetNativeSDLState();
             Assert.That(nativeState, Is.Not.Null);
+
             AssertEqual(window.UnsafeGetStateStorage(), nativeState!);
+
+            window.Destroy();
         }
 
         public static void AssertEqual(IReadOnlyNativeState actual, IReadOnlyNativeState expected)

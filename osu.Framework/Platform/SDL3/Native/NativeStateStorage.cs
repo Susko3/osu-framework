@@ -3,7 +3,6 @@
 
 using System.Drawing;
 using osu.Framework.Bindables;
-using osu.Framework.Graphics;
 
 namespace osu.Framework.Platform.SDL3.Native
 {
@@ -27,7 +26,7 @@ namespace osu.Framework.Platform.SDL3.Native
             Size.Value = state.Size;
             SafeArea.Value = state.SafeArea;
             AspectRatio.Value = state.AspectRatio;
-            BordersSize.Value = state.BordersSize;
+            // BordersSize.Value = state.BordersSize;
             SizeInPixels.Value = state.SizeInPixels;
             MinimumSize.Value = state.MinimumSize;
             MaximumSize.Value = state.MaximumSize;
@@ -37,8 +36,6 @@ namespace osu.Framework.Platform.SDL3.Native
             Visible.Value = state.Visible;
             WindowState.Value = state.WindowState;
             Fullscreen.Value = state.Fullscreen;
-            KeyboardGrab.Value = state.KeyboardGrab;
-            MouseGrab.Value = state.MouseGrab;
             MouseRect.Value = state.MouseRect;
             Opacity.Value = state.Opacity;
             Focusable.Value = state.Focusable;
@@ -109,10 +106,6 @@ namespace osu.Framework.Platform.SDL3.Native
         /// <remarks>Updated by events.</remarks>
         public readonly BindableBool Fullscreen = new();
 
-        public readonly BindableBool KeyboardGrab = new();
-
-        public readonly BindableBool MouseGrab = new();
-
         public readonly Bindable<Rectangle?> MouseRect = new();
 
         public readonly BindableFloat Opacity = new(1.0f) { MinValue = 0.0f, MaxValue = 1.0f };
@@ -142,7 +135,7 @@ namespace osu.Framework.Platform.SDL3.Native
         Size IReadOnlyNativeState.Size => Size.Value;
         Rectangle IReadOnlyNativeState.SafeArea => SafeArea.Value;
         AspectRatio IReadOnlyNativeState.AspectRatio => AspectRatio.Value;
-        MarginPadding IReadOnlyNativeState.BordersSize => BordersSize.Value;
+        // MarginPadding IReadOnlyNativeState.BordersSize => BordersSize.Value;
         Size IReadOnlyNativeState.SizeInPixels => SizeInPixels.Value;
         Size IReadOnlyNativeState.MinimumSize => MinimumSize.Value;
         Size IReadOnlyNativeState.MaximumSize => MaximumSize.Value;
@@ -152,8 +145,6 @@ namespace osu.Framework.Platform.SDL3.Native
         bool IReadOnlyNativeState.Visible => Visible.Value;
         NativeState IReadOnlyNativeState.WindowState => WindowState.Value;
         bool IReadOnlyNativeState.Fullscreen => Fullscreen.Value;
-        bool IReadOnlyNativeState.KeyboardGrab => KeyboardGrab.Value;
-        bool IReadOnlyNativeState.MouseGrab => MouseGrab.Value;
         Rectangle? IReadOnlyNativeState.MouseRect => MouseRect.Value;
         float IReadOnlyNativeState.Opacity => Opacity.Value;
         bool IReadOnlyNativeState.Focusable => Focusable.Value;
@@ -190,10 +181,6 @@ namespace osu.Framework.Platform.SDL3.Native
         void IWriteOnlyNativeState.SetWindowState(NativeState value) => WindowState.Value = value;
 
         void IWriteOnlyNativeState.SetFullscreen(bool value) => Fullscreen.Value = value;
-
-        void IWriteOnlyNativeState.SetMouseGrab(bool value) => MouseGrab.Value = value;
-
-        void IWriteOnlyNativeState.SetKeyboardGrab(bool value) => KeyboardGrab.Value = value;
 
         void IWriteOnlyNativeState.SetMouseRect(Rectangle? value) => MouseRect.Value = value;
 

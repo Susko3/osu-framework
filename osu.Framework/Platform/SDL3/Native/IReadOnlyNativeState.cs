@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Drawing;
-using osu.Framework.Graphics;
 
 namespace osu.Framework.Platform.SDL3.Native
 {
@@ -57,7 +56,7 @@ namespace osu.Framework.Platform.SDL3.Native
 
         AspectRatio AspectRatio { get; }
 
-        MarginPadding BordersSize { get; }
+        // MarginPadding BordersSize { get; }
 
         Size SizeInPixels { get; }
 
@@ -78,10 +77,6 @@ namespace osu.Framework.Platform.SDL3.Native
         bool Fullscreen { get; }
 
         // missing SDL_WindowGet*Surface
-
-        bool KeyboardGrab { get; }
-
-        bool MouseGrab { get; }
 
         Rectangle? MouseRect { get; }
 

@@ -9,11 +9,6 @@ using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL3.Native
 {
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="Area"></param>
-    /// <param name="CursorOffset">Current cursor location relative to <paramref name="Area"/>.<see cref="Rectangle.X"/>.</param>
     public record TextInputParams(
         SDL_TextInputType Type,
         SDL_Capitalization Capitalization,

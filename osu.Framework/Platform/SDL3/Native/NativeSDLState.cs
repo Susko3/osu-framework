@@ -186,10 +186,6 @@ namespace osu.Framework.Platform.SDL3.Native
 
         public bool Fullscreen => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_FULLSCREEN);
 
-        public bool KeyboardGrab => SDL_GetWindowKeyboardGrab(window);
-
-        public bool MouseGrab => SDL_GetWindowMouseGrab(window);
-
         public Rectangle? MouseRect
         {
             get
@@ -207,8 +203,10 @@ namespace osu.Framework.Platform.SDL3.Native
 
         public bool Focusable => !flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_NOT_FOCUSABLE);
         public bool Occluded => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_OCCLUDED);
-        public bool InputFocus => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS);
-        public bool MouseFocus => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS);
+
+        public bool InputFocus => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS) && Visible; // a hidden window can't have input focus, see bug https://github.com/libsdl-org/SDL/issues/11564
+
+        public bool MouseFocus => flags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS) && Visible; // ditto
 
         public void SetTextInputParams(TextInputParams? value)
         {
@@ -295,16 +293,19 @@ namespace osu.Framework.Platform.SDL3.Native
         public void SetBordered(bool value)
         {
             SDL_SetWindowBordered(window, value).ThrowIfFailed();
+            backingStore.Bordered.Value = Bordered;
         }
 
         public void SetResizable(bool value)
         {
             SDL_SetWindowResizable(window, value).ThrowIfFailed();
+            backingStore.Resizable.Value = Resizable;
         }
 
         public void SetAlwaysOnTop(bool value)
         {
             SDL_SetWindowAlwaysOnTop(window, value).ThrowIfFailed();
+            backingStore.AlwaysOnTop.Value = AlwaysOnTop;
         }
 
         public void SetVisible(bool value)
@@ -351,16 +352,6 @@ namespace osu.Framework.Platform.SDL3.Native
             SDL_SetWindowFullscreen(window, value).ThrowIfFailed();
         }
 
-        public void SetMouseGrab(bool value)
-        {
-            SDL_SetWindowMouseGrab(window, value).ThrowIfFailed();
-        }
-
-        public void SetKeyboardGrab(bool value)
-        {
-            SDL_SetWindowKeyboardGrab(window, value).ThrowIfFailed();
-        }
-
         public void SetMouseRect(Rectangle? value)
         {
             if (value == null)
@@ -372,16 +363,20 @@ namespace osu.Framework.Platform.SDL3.Native
                 SDL_Rect rect = value.Value.ToSDLRect();
                 SDL_SetWindowMouseRect(window, &rect).ThrowIfFailed();
             }
+
+            backingStore.MouseRect.Value = MouseRect;
         }
 
         public void SetOpacity(float value)
         {
             SDL_SetWindowOpacity(window, value).ThrowIfFailed();
+            backingStore.Opacity.Value = Opacity;
         }
 
         public void SetFocusable(bool value)
         {
             SDL_SetWindowFocusable(window, value).ThrowIfFailed();
+            backingStore.Focusable.Value = Focusable;
         }
     }
 }

@@ -57,10 +57,6 @@ namespace osu.Framework.Platform.SDL3.Native
 
         // missing SDL_WindowSet*Surface
 
-        void SetMouseGrab(bool value);
-
-        void SetKeyboardGrab(bool value);
-
         void SetMouseRect(Rectangle? value);
 
         void SetOpacity(float value);
@@ -91,16 +87,14 @@ namespace osu.Framework.Platform.SDL3.Native
             SetPosition(o.Position);
             SetSize(o.Size);
             SetAspectRatio(o.AspectRatio);
+            SetMaximumSize(o.MaximumSize); // inverted to work around https://github.com/libsdl-org/SDL/issues/11563
             SetMinimumSize(o.MinimumSize);
-            SetMaximumSize(o.MaximumSize);
             SetBordered(o.Bordered);
             SetResizable(o.Resizable);
             SetAlwaysOnTop(o.AlwaysOnTop);
             SetVisible(o.Visible);
             SetWindowState(o.WindowState);
             SetFullscreen(o.Fullscreen);
-            SetMouseGrab(o.MouseGrab);
-            SetKeyboardGrab(o.KeyboardGrab);
             SetMouseRect(o.MouseRect);
             SetOpacity(o.Opacity);
             SetFocusable(o.Focusable);

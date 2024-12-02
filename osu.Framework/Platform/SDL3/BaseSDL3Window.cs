@@ -10,7 +10,7 @@ using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL3
 {
-    internal class BaseSDL3Window
+    public class BaseSDL3Window : IDisposable
     {
         protected readonly DisplayManager DisplayManager = new DisplayManager();
 
@@ -56,7 +56,6 @@ namespace osu.Framework.Platform.SDL3
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MAXIMIZED_BOOLEAN, nativeStateStorage.WindowState.Value == NativeState.Maximised).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MINIMIZED_BOOLEAN, nativeStateStorage.WindowState.Value == NativeState.Minimised).ThrowIfFailed();
-                SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MOUSE_GRABBED_BOOLEAN, nativeStateStorage.MouseGrab.Value).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, nativeStateStorage.Resizable.Value).ThrowIfFailed();
                 SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, nativeStateStorage.Title.Value).ThrowIfFailed();
                 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, nativeStateStorage.Size.Value.Width).ThrowIfFailed();
@@ -118,6 +117,8 @@ namespace osu.Framework.Platform.SDL3
 
                 case SDL_EventType.SDL_EVENT_WINDOW_HIDDEN:
                     nativeStateStorage.Visible.Value = false;
+                    nativeStateStorage.MouseFocus.Value = nativeSDLState.MouseFocus;
+                    nativeStateStorage.InputFocus.Value = nativeSDLState.InputFocus;
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_EXPOSED:
