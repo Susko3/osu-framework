@@ -13,7 +13,7 @@ using osuTK;
 
 namespace osu.Framework.Platform.SDL3
 {
-    internal partial class NewSDL3Window : BaseSDL3Window, ISDL3Window
+    internal partial class NewSDL3Window : NotQuiteBaseSDL3Window, ISDL3Window
     {
         private readonly SDL3GraphicsSurface graphicsSurface;
         IGraphicsSurface IWindow.GraphicsSurface => graphicsSurface;
@@ -75,7 +75,7 @@ namespace osu.Framework.Platform.SDL3
 
         bool IWindow.Resizable
         {
-            get => UnsafeGetState().Resizable.Value;
+            get => UnsafeGetStateStorage().Resizable.Value;
             set => ScheduleNativeStateUpdate(newState => newState.SetResizable(value));
         }
 

@@ -10,7 +10,6 @@ using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
-using osu.Framework.Platform.SDL3.Native;
 using osuTK.Input;
 using SDL;
 using static SDL.SDL3;
@@ -864,40 +863,40 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        public static WindowStateMagic ToWindowState(this SDL_WindowFlags windowFlags)
+        public static WindowState ToWindowState(this SDL_WindowFlags windowFlags)
         {
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_BORDERLESS))
-                return WindowStateMagic.FullscreenBorderless;
+                return WindowState.FullscreenBorderless;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MINIMIZED))
-                return WindowStateMagic.Minimised;
+                return WindowState.Minimised;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_FULLSCREEN))
-                return WindowStateMagic.Fullscreen;
+                return WindowState.Fullscreen;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MAXIMIZED))
-                return WindowStateMagic.Maximised;
+                return WindowState.Maximised;
 
-            return WindowStateMagic.Normal;
+            return WindowState.Normal;
         }
 
-        public static SDL_WindowFlags ToFlags(this WindowStateMagic state)
+        public static SDL_WindowFlags ToFlags(this WindowState state)
         {
             switch (state)
             {
-                case WindowStateMagic.Normal:
+                case WindowState.Normal:
                     return 0;
 
-                case WindowStateMagic.Fullscreen:
+                case WindowState.Fullscreen:
                     return SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
 
-                case WindowStateMagic.Maximised:
+                case WindowState.Maximised:
                     return SDL_WindowFlags.SDL_WINDOW_MAXIMIZED;
 
-                case WindowStateMagic.Minimised:
+                case WindowState.Minimised:
                     return SDL_WindowFlags.SDL_WINDOW_MINIMIZED;
 
-                case WindowStateMagic.FullscreenBorderless:
+                case WindowState.FullscreenBorderless:
                     return SDL_WindowFlags.SDL_WINDOW_BORDERLESS;
             }
 
@@ -1172,6 +1171,14 @@ namespace osu.Framework.Platform.SDL3
         public static string ThrowIfFailed(this string? returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
         {
             if (returnValue == null)
+                throwFailed(expression);
+
+            return returnValue;
+        }
+
+        public static int ThrowIfFailed(this int returnValue, [CallerArgumentExpression(nameof(returnValue))] string? expression = null)
+        {
+            if (returnValue == -1)
                 throwFailed(expression);
 
             return returnValue;

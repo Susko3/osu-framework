@@ -2,23 +2,16 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Platform.SDL3.Native;
-using osu.Framework.Threading;
 using SDL;
 using static SDL.SDL3;
 
 namespace osu.Framework.Platform.SDL3
 {
-    internal abstract class BaseSDL3Window
+    internal class BaseSDL3Window
     {
-        protected readonly Scheduler EventScheduler = new Scheduler();
-        protected readonly Scheduler CommandScheduler = new Scheduler();
-
         protected readonly DisplayManager DisplayManager = new DisplayManager();
 
         private NativeSDLState? nativeSDLState;
@@ -26,95 +19,28 @@ namespace osu.Framework.Platform.SDL3
         /// <summary>
         /// Stores the state provided by <see cref="nativeSDLState"/> and <see cref="HandleWindowEvent"/>.
         /// </summary>
-        private readonly NativeStateStorage nativeStateStorage = new NativeStateStorage();
+        private readonly NativeStateStorage nativeStateStorage;
 
-        public NativeStateStorage UnsafeGetState() => nativeStateStorage;
+        public NativeStateStorage UnsafeGetStateStorage() => nativeStateStorage;
 
-        internal unsafe SDL_Window* SDLWindowHandle { get; private set; }
+        public NativeSDLState? UnsafeGetNativeSDLState() => nativeSDLState;
 
-        protected bool UpdatingDerivedState { get; private set; }
+        public IWriteOnlyNativeState UnsafeGetWriteableState() => nativeSDLState != null ? nativeSDLState : nativeStateStorage;
 
-        public IDisposable? StartUpdatingDerivedState()
+        public unsafe SDL_Window* SDLWindowHandle { get; private set; }
+        public SDL_WindowID WindowID { get; private set; }
+
+        public BaseSDL3Window(NativeStateStorage initialState)
         {
-            if (UpdatingDerivedState)
-                return null;
-
-            UpdatingDerivedState = true;
-            return new InvokeOnDisposal<BaseSDL3Window>(this, static w => w.UpdatingDerivedState = false);
+            nativeStateStorage = initialState;
         }
 
-        protected void SetupNativeDependencies()
-        {
-            SetupNativeDependencies(nativeStateStorage);
-        }
-
-        protected abstract void SetupNativeDependencies(NativeStateStorage nativeState);
-
-        /// <remarks>Should only be called inside <see cref="SetupNativeDependencies(NativeStateStorage)"/></remarks>
-        public void DependsOnNative<T>(UpdateDerivedStateDelegate updateMethod, IBindable<T> stateStorageBindable)
-        {
-            stateStorageBindable.BindValueChanged(_ =>
-            {
-                lock (scheduledDerivedUpdates)
-                {
-                    if (!scheduledDerivedUpdates.Contains(updateMethod))
-                        scheduledDerivedUpdates.Add(updateMethod);
-                }
-            });
-        }
-
-        private readonly List<UpdateDerivedStateDelegate> scheduledDerivedUpdates = [];
-        private readonly List<UpdateNativeStateDelegate> scheduledNativeUpdates = [];
-
-        protected void UpdateDerivedState()
-        {
-            lock (scheduledDerivedUpdates)
-            {
-                UpdatingDerivedState = true;
-
-                foreach (var task in scheduledDerivedUpdates)
-                    task(nativeStateStorage);
-
-                scheduledDerivedUpdates.Clear();
-
-                UpdatingDerivedState = false;
-            }
-        }
-
-        protected void UpdateNativeState()
-        {
-            lock (scheduledNativeUpdates)
-            {
-                foreach (var task in scheduledNativeUpdates)
-                    task(nativeSDLState != null ? nativeSDLState : nativeStateStorage);
-
-                scheduledNativeUpdates.Clear();
-            }
-        }
-
-        protected void ScheduleNativeStateUpdate(UpdateNativeStateDelegate update)
-        {
-            lock (scheduledNativeUpdates)
-            {
-                if (!scheduledNativeUpdates.Contains(update))
-                    scheduledNativeUpdates.Add(update);
-            }
-        }
-
-        protected void DependsOnDerived<T>(UpdateNativeStateDelegate updateMethod, IBindable<T> windowBindable)
-        {
-            windowBindable.BindValueChanged(_ =>
-            {
-                if (UpdatingDerivedState)
-                    return;
-
-                ScheduleNativeStateUpdate(updateMethod);
-            }, true);
-        }
-
-        protected unsafe void Create(SDL_WindowFlags flags)
+        public unsafe void Create(SDL_WindowFlags flags)
         {
             Debug.Assert(SDLWindowHandle == null);
+
+            if (SDL_WasInit(SDL_InitFlags.SDL_INIT_VIDEO) == 0)
+                throw new InvalidOperationException("SDL video subsystem not initialized.");
 
             var props = SDL_CreateProperties().ThrowIfFailed();
 
@@ -139,6 +65,8 @@ namespace osu.Framework.Platform.SDL3
 
                 SDLWindowHandle = SDL_CreateWindowWithProperties(props);
                 SDLException.ThrowIfNull(SDLWindowHandle, "Failed to create window.");
+
+                WindowID = SDL_GetWindowID(SDLWindowHandle);
             }
             finally
             {
@@ -150,13 +78,13 @@ namespace osu.Framework.Platform.SDL3
             nativeSDLState.UpdateFrom(nativeStateStorage);
         }
 
-        protected void PrepareForRun()
+        public void PrepareForRun()
         {
             Debug.Assert(nativeSDLState != null);
             nativeStateStorage.UpdateFrom(nativeSDLState);
         }
 
-        protected unsafe void Destroy()
+        public unsafe void Destroy()
         {
             if (SDLWindowHandle != null)
             {
@@ -165,9 +93,22 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        protected void HandleWindowEvent(SDL_WindowEvent evt)
+        public unsafe void HandleEvent(SDL_Event evt)
+        {
+            if (evt.Type >= SDL_EventType.SDL_EVENT_WINDOW_FIRST && evt.Type <= SDL_EventType.SDL_EVENT_WINDOW_LAST && evt.window.windowID == WindowID)
+            {
+                HandleWindowEvent(evt.window);
+            }
+            else if (evt.Type >= SDL_EventType.SDL_EVENT_DISPLAY_FIRST && evt.Type <= SDL_EventType.SDL_EVENT_DISPLAY_LAST)
+            {
+                HandleDisplayEvent(evt.display);
+            }
+        }
+
+        public void HandleWindowEvent(SDL_WindowEvent evt)
         {
             Debug.Assert(nativeSDLState != null);
+            Debug.Assert(evt.windowID == WindowID);
 
             switch (evt.type)
             {
@@ -262,7 +203,7 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        protected void HandleDisplayEvent(SDL_DisplayEvent evt)
+        public void HandleDisplayEvent(SDL_DisplayEvent evt)
         {
             Debug.Assert(nativeSDLState != null);
 
@@ -288,8 +229,4 @@ namespace osu.Framework.Platform.SDL3
             Dispose(true);
         }
     }
-
-    public delegate void UpdateDerivedStateDelegate(IReadOnlyNativeState state);
-
-    public delegate void UpdateNativeStateDelegate(IWriteOnlyNativeState newState);
 }
