@@ -23,7 +23,7 @@ namespace osu.Framework.Platform.Windows
         /// <remarks>Used on <see cref="GraphicsSurfaceType.OpenGL"/> and <see cref="GraphicsSurfaceType.Vulkan"/>.</remarks>
         private const int windows_borderless_width_hack = 1;
 
-        protected NewSDL3WindowsWindow(GraphicsSurfaceType surfaceType, string appName)
+        public NewSDL3WindowsWindow(GraphicsSurfaceType surfaceType, string appName)
             : base(surfaceType, appName)
         {
         }

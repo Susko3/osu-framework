@@ -864,40 +864,40 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        public static WindowState ToWindowState(this SDL_WindowFlags windowFlags)
+        public static WindowStateMagic ToWindowState(this SDL_WindowFlags windowFlags)
         {
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_BORDERLESS))
-                return WindowState.FullscreenBorderless;
+                return WindowStateMagic.FullscreenBorderless;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MINIMIZED))
-                return WindowState.Minimised;
+                return WindowStateMagic.Minimised;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_FULLSCREEN))
-                return WindowState.Fullscreen;
+                return WindowStateMagic.Fullscreen;
 
             if (windowFlags.HasFlagFast(SDL_WindowFlags.SDL_WINDOW_MAXIMIZED))
-                return WindowState.Maximised;
+                return WindowStateMagic.Maximised;
 
-            return WindowState.Normal;
+            return WindowStateMagic.Normal;
         }
 
-        public static SDL_WindowFlags ToFlags(this WindowState state)
+        public static SDL_WindowFlags ToFlags(this WindowStateMagic state)
         {
             switch (state)
             {
-                case WindowState.Normal:
+                case WindowStateMagic.Normal:
                     return 0;
 
-                case WindowState.Fullscreen:
+                case WindowStateMagic.Fullscreen:
                     return SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
 
-                case WindowState.Maximised:
+                case WindowStateMagic.Maximised:
                     return SDL_WindowFlags.SDL_WINDOW_MAXIMIZED;
 
-                case WindowState.Minimised:
+                case WindowStateMagic.Minimised:
                     return SDL_WindowFlags.SDL_WINDOW_MINIMIZED;
 
-                case WindowState.FullscreenBorderless:
+                case WindowStateMagic.FullscreenBorderless:
                     return SDL_WindowFlags.SDL_WINDOW_BORDERLESS;
             }
 

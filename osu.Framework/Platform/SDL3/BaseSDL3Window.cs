@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Platform.SDL3.Native;
 using osu.Framework.Threading;
@@ -26,11 +28,20 @@ namespace osu.Framework.Platform.SDL3
         /// </summary>
         private readonly NativeStateStorage nativeStateStorage = new NativeStateStorage();
 
-        protected NativeStateStorage UnsafeGetState() => nativeStateStorage;
+        public NativeStateStorage UnsafeGetState() => nativeStateStorage;
 
         internal unsafe SDL_Window* SDLWindowHandle { get; private set; }
 
         protected bool UpdatingDerivedState { get; private set; }
+
+        public IDisposable? StartUpdatingDerivedState()
+        {
+            if (UpdatingDerivedState)
+                return null;
+
+            UpdatingDerivedState = true;
+            return new InvokeOnDisposal<BaseSDL3Window>(this, static w => w.UpdatingDerivedState = false);
+        }
 
         protected void SetupNativeDependencies()
         {
@@ -40,7 +51,7 @@ namespace osu.Framework.Platform.SDL3
         protected abstract void SetupNativeDependencies(NativeStateStorage nativeState);
 
         /// <remarks>Should only be called inside <see cref="SetupNativeDependencies(NativeStateStorage)"/></remarks>
-        protected void DependsOnNative<T>(UpdateDerivedStateDelegate updateMethod, IBindable<T> stateStorageBindable)
+        public void DependsOnNative<T>(UpdateDerivedStateDelegate updateMethod, IBindable<T> stateStorageBindable)
         {
             stateStorageBindable.BindValueChanged(_ =>
             {
@@ -54,10 +65,6 @@ namespace osu.Framework.Platform.SDL3
 
         private readonly List<UpdateDerivedStateDelegate> scheduledDerivedUpdates = [];
         private readonly List<UpdateNativeStateDelegate> scheduledNativeUpdates = [];
-
-        protected delegate void UpdateDerivedStateDelegate(IReadOnlyNativeState state);
-
-        protected delegate void UpdateNativeStateDelegate(IWriteOnlyNativeState newState);
 
         protected void UpdateDerivedState()
         {
@@ -117,7 +124,7 @@ namespace osu.Framework.Platform.SDL3
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, !nativeStateStorage.Bordered.Value).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FOCUSABLE_BOOLEAN, nativeStateStorage.Focusable.Value).ThrowIfFailed();
                 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, (int)flags).ThrowIfFailed();
-                SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN, nativeStateStorage.Fullscreen.Value).ThrowIfFailed(); // TODO: fullscreen borderless?
+                SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN, nativeStateStorage.Fullscreen.Value).ThrowIfFailed();
                 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, nativeStateStorage.Size.Value.Height).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, !nativeStateStorage.Visible.Value).ThrowIfFailed();
                 SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true).ThrowIfFailed();
@@ -281,4 +288,8 @@ namespace osu.Framework.Platform.SDL3
             Dispose(true);
         }
     }
+
+    public delegate void UpdateDerivedStateDelegate(IReadOnlyNativeState state);
+
+    public delegate void UpdateNativeStateDelegate(IWriteOnlyNativeState newState);
 }

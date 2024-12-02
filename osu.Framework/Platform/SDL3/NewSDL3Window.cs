@@ -13,7 +13,7 @@ using osuTK;
 
 namespace osu.Framework.Platform.SDL3
 {
-    internal class NewSDL3Window : BaseSDL3Window, ISDL3Window
+    internal partial class NewSDL3Window : BaseSDL3Window, ISDL3Window
     {
         private readonly SDL3GraphicsSurface graphicsSurface;
         IGraphicsSurface IWindow.GraphicsSurface => graphicsSurface;
@@ -55,7 +55,7 @@ namespace osu.Framework.Platform.SDL3
         /// <summary>
         /// Bound to <see cref="FrameworkSetting.WindowMode"/>.
         /// </summary>
-        public Bindable<WindowMode> WindowMode { get; } = new Bindable<WindowMode>();
+        public Bindable<WindowMode> WindowMode => WindowModeMagic.Bindable;
 
         #endregion
 
@@ -176,47 +176,106 @@ namespace osu.Framework.Platform.SDL3
             cursorInWindow.Value = state.MouseFocus;
         }
 
-        private WindowState windowState;
         private readonly BindableBool isActive = new BindableBool();
 
-        private WindowState? pendingWindowState;
-
-        public WindowState WindowState
+        internal readonly SettableTroughBindableMagic<WindowMode> WindowModeMagic = new SettableTroughBindableMagic<WindowMode>
         {
-            get => windowState;
+            SetupDependencies = (@this, state) =>
+            {
+                if (RuntimeInfo.OS == RuntimeInfo.Platform.Windows)
+                    @this.DependsOnNative(state.Bordered);
+
+                @this.DependsOnNative(state.Fullscreen);
+                @this.DependsOnNative(state.FullscreenMode);
+            },
+            GetValue = state =>
+            {
+                if (RuntimeInfo.OS == RuntimeInfo.Platform.Windows && !state.Bordered)
+                    return Configuration.WindowMode.Borderless;
+
+                if (state.Fullscreen)
+                    return state.FullscreenMode == null ? Configuration.WindowMode.Borderless : Configuration.WindowMode.Fullscreen;
+
+                return Configuration.WindowMode.Windowed;
+            }
+        };
+
+        internal readonly SettableMagic<WindowState> WindowStateMagic = new SettableMagic<WindowState>
+        {
+            SetupDependencies = (@this, state) =>
+            {
+                if (RuntimeInfo.OS == RuntimeInfo.Platform.Windows)
+                    @this.DependsOnNative(state.Bordered);
+
+                @this.DependsOnNative(state.Fullscreen);
+                @this.DependsOnNative(state.FullscreenMode);
+                @this.DependsOnNative(state.WindowState);
+            },
+            GetValue = state =>
+            {
+                switch (state.WindowState)
+                {
+                    case NativeState.Restored:
+                        if (RuntimeInfo.OS == RuntimeInfo.Platform.Windows && !state.Bordered)
+                            return WindowState.FullscreenBorderless;
+
+                        if (state.Fullscreen)
+                            return state.FullscreenMode == null ? WindowState.FullscreenBorderless : WindowState.Fullscreen;
+
+                        return WindowState.Normal;
+
+                    case NativeState.Minimised:
+                        return WindowState.Minimised;
+
+                    case NativeState.Maximised:
+                        return WindowState.Maximised;
+
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        };
+
+        // TODO: in IWindow, this should be IBindable<WindowState> and SetWindowState(value)
+        WindowState IWindow.WindowState
+        {
+            get => WindowStateMagic.Bindable.Value;
+
             set
             {
-                if (value == windowState)
+                // TODO: we are reading an input thread bindable from the update thread
+                if (value == WindowStateMagic.Bindable.Value)
                     return;
 
-                pendingWindowState = value;
-
-                switch (value)
+                CommandScheduler.AddOnce(value =>
                 {
-                    case WindowState.Maximised:
-                    case WindowState.Normal:
-                        WindowMode.Value = Configuration.WindowMode.Windowed;
-                        break;
+                    pendingWindowState = value;
 
-                    case WindowState.Fullscreen:
-                        WindowMode.Value = Configuration.WindowMode.Fullscreen;
-                        break;
+                    switch (value)
+                    {
+                        case WindowState.Maximised:
+                        case WindowState.Normal:
+                            pendingWindowMode = Configuration.WindowMode.Windowed;
+                            break;
 
-                    case WindowState.FullscreenBorderless:
-                        WindowMode.Value = Configuration.WindowMode.Borderless;
-                        break;
-                }
+                        case WindowState.Fullscreen:
+                            pendingWindowMode = Configuration.WindowMode.Fullscreen;
+                            break;
 
+                        case WindowState.FullscreenBorderless:
+                            pendingWindowMode = Configuration.WindowMode.Borderless;
+                            break;
+                    }
+                }, value);
+
+                // TODO: how do we know what depends on us?
                 ScheduleNativeStateUpdate(updateNativeWindowState);
             }
         }
 
         private void updateNativeWindowState(IWriteOnlyNativeState state)
         {
-            if (pendingWindowState == null)
-                return;
-
-            switch (pendingWindowState.Value)
+            switch (pendingWindowState ?? WindowState.Value)
             {
                 case WindowState.Normal:
                 case WindowState.Fullscreen:
@@ -231,9 +290,6 @@ namespace osu.Framework.Platform.SDL3
                 case WindowState.Maximised:
                     state.SetWindowState(NativeState.Maximised);
                     break;
-
-                default:
-                    throw new InvalidOperationException($"Invalid window state: {pendingWindowState.Value}");
             }
         }
 
@@ -268,10 +324,10 @@ namespace osu.Framework.Platform.SDL3
                     throw new ArgumentOutOfRangeException(nameof(state), $"Invalid {nameof(NativeState)}: {state.WindowState}");
             }
 
-            if (newState != windowState)
+            if (newState != WindowState)
             {
-                windowState = newState;
-                WindowStateChanged?.Invoke(windowState);
+                WindowState = newState;
+                WindowStateChanged?.Invoke(WindowState);
             }
         }
 
@@ -292,7 +348,7 @@ namespace osu.Framework.Platform.SDL3
 
         protected virtual void UpdateNativeFullscreenMode(IWriteOnlyNativeState newState)
         {
-            switch (WindowMode.Value)
+            switch (pendingWindowMode ?? WindowMode.Value)
             {
                 case Configuration.WindowMode.Borderless:
                     newState.SetFullscreenMode(null);

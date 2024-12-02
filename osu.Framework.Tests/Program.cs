@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using osu.Framework.Platform;
+using osu.Framework.Platform.Windows;
 
 namespace osu.Framework.Tests
 {
@@ -12,6 +13,9 @@ namespace osu.Framework.Tests
         [STAThread]
         public static void Main(string[] args)
         {
+            // myMain();
+            // return;
+
             bool benchmark = args.Contains(@"--benchmark");
             bool portable = args.Contains(@"--portable");
 
@@ -22,6 +26,14 @@ namespace osu.Framework.Tests
                 else
                     host.Run(new VisualTestGame());
             }
+        }
+
+        private static void myMain()
+        {
+            var window = new NewSDL3WindowsWindow(GraphicsSurfaceType.Direct3D11, "tests");
+
+            window.SetupConfig();
+
         }
     }
 }

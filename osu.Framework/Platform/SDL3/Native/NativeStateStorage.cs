@@ -14,7 +14,37 @@ namespace osu.Framework.Platform.SDL3.Native
     {
         public void UpdateFrom(IReadOnlyNativeState state)
         {
-            ((IWriteOnlyNativeState)this).SetFrom(state);
+            // ((IWriteOnlyNativeState)this).SetFrom(state);
+            TextInputParams.Value = state.TextInputParams;
+            RelativeMouseMode.Value = state.RelativeMouseMode;
+            CurrentDisplayMode.Value = state.CurrentDisplayMode;
+            Display.Value = state.Display;
+            PixelDensity.Value = state.PixelDensity;
+            DisplayScale.Value = state.DisplayScale;
+            FullscreenMode.Value = state.FullscreenMode;
+            Title.Value = state.Title;
+            Position.Value = state.Position;
+            Size.Value = state.Size;
+            SafeArea.Value = state.SafeArea;
+            AspectRatio.Value = state.AspectRatio;
+            BordersSize.Value = state.BordersSize;
+            SizeInPixels.Value = state.SizeInPixels;
+            MinimumSize.Value = state.MinimumSize;
+            MaximumSize.Value = state.MaximumSize;
+            Bordered.Value = state.Bordered;
+            Resizable.Value = state.Resizable;
+            AlwaysOnTop.Value = state.AlwaysOnTop;
+            Visible.Value = state.Visible;
+            WindowState.Value = state.WindowState;
+            Fullscreen.Value = state.Fullscreen;
+            KeyboardGrab.Value = state.KeyboardGrab;
+            MouseGrab.Value = state.MouseGrab;
+            MouseRect.Value = state.MouseRect;
+            Opacity.Value = state.Opacity;
+            Focusable.Value = state.Focusable;
+            Occluded.Value = state.Occluded;
+            InputFocus.Value = state.InputFocus;
+            MouseFocus.Value = state.MouseFocus;
         }
 
         // ReSharper disable ArrangeObjectCreationWhenTypeEvident
@@ -26,7 +56,7 @@ namespace osu.Framework.Platform.SDL3.Native
         /// </summary>
         public readonly Bindable<TextInputParams?> TextInputParams = new();
 
-        public readonly Bindable<bool> RelativeMouseMode = new();
+        public readonly BindableBool RelativeMouseMode = new();
 
         public readonly Bindable<DisplayMode> CurrentDisplayMode = new();
 
@@ -34,69 +64,69 @@ namespace osu.Framework.Platform.SDL3.Native
         public readonly Bindable<Display> Display = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<float> PixelDensity = new();
+        public readonly BindableFloat PixelDensity = new() { MinValue = float.Epsilon };
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<float> DisplayScale = new();
+        public readonly BindableFloat DisplayScale = new() { MinValue = float.Epsilon };
 
         /// <remarks>Updated by events.</remarks>
         public readonly Bindable<DisplayMode?> FullscreenMode = new();
 
-        public readonly Bindable<string> Title = new();
+        public readonly Bindable<string> Title = new(string.Empty);
 
         /// <remarks>Updated by events.</remarks>
         public readonly Bindable<Point> Position = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<Size> Size = new();
+        public readonly BindableSize Size = new(new Size(640, 480)) { MinValue = new Size(1, 1) };
 
         /// <remarks>Updated by events.</remarks>
         public readonly Bindable<Rectangle> SafeArea = new();
 
         public readonly Bindable<AspectRatio> AspectRatio = new();
 
-        public readonly Bindable<MarginPadding> BordersSize = new();
+        public readonly BindableMarginPadding BordersSize = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<Size> SizeInPixels = new();
+        public readonly BindableSize SizeInPixels = new();
 
-        public readonly Bindable<Size> MinimumSize = new();
+        public readonly BindableSize MinimumSize = new();
 
-        public readonly Bindable<Size> MaximumSize = new();
+        public readonly BindableSize MaximumSize = new();
 
-        public readonly Bindable<bool> Bordered = new();
+        public readonly BindableBool Bordered = new(true);
 
-        public readonly Bindable<bool> Resizable = new();
+        public readonly BindableBool Resizable = new();
 
-        public readonly Bindable<bool> AlwaysOnTop = new();
+        public readonly BindableBool AlwaysOnTop = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<bool> Visible = new();
+        public readonly BindableBool Visible = new(true);
 
         /// <remarks>Updated by events.</remarks>
         public readonly Bindable<NativeState> WindowState = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<bool> Fullscreen = new();
+        public readonly BindableBool Fullscreen = new();
 
-        public readonly Bindable<bool> KeyboardGrab = new();
+        public readonly BindableBool KeyboardGrab = new();
 
-        public readonly Bindable<bool> MouseGrab = new();
+        public readonly BindableBool MouseGrab = new();
 
         public readonly Bindable<Rectangle?> MouseRect = new();
 
-        public readonly Bindable<float> Opacity = new();
+        public readonly BindableFloat Opacity = new(1.0f) { MinValue = 0.0f, MaxValue = 1.0f };
 
-        public readonly Bindable<bool> Focusable = new();
-
-        /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<bool> Occluded = new();
+        public readonly BindableBool Focusable = new(true);
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<bool> InputFocus = new();
+        public readonly BindableBool Occluded = new();
 
         /// <remarks>Updated by events.</remarks>
-        public readonly Bindable<bool> MouseFocus = new();
+        public readonly BindableBool InputFocus = new();
+
+        /// <remarks>Updated by events.</remarks>
+        public readonly BindableBool MouseFocus = new();
 
         // ReSharper restore ArrangeObjectCreationWhenTypeEvident
 

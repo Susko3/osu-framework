@@ -11,6 +11,7 @@ using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Logging;
+using osu.Framework.Platform.SDL3.Native;
 using osuTK;
 using SDL;
 using static SDL.SDL3;
@@ -254,14 +255,14 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        private WindowState windowState = WindowState.Normal;
+        private WindowStateMagic windowState = WindowState.Normal;
 
-        private WindowState? pendingWindowState;
+        private WindowStateMagic? pendingWindowState;
 
         /// <summary>
         /// Returns or sets the window's current <see cref="WindowState"/>.
         /// </summary>
-        public WindowState WindowState
+        public WindowStateMagic WindowState
         {
             get => windowState;
             set
@@ -679,7 +680,7 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        private static unsafe bool tryFetchDisplayMode(SDL_Window* windowHandle, WindowState windowState, Display display, out DisplayMode displayMode)
+        private static unsafe bool tryFetchDisplayMode(SDL_Window* windowHandle, WindowStateMagic windowState, Display display, out DisplayMode displayMode)
         {
             if (!tryGetDisplayAtIndex(display.Index, out var displayID))
             {
@@ -704,7 +705,7 @@ namespace osu.Framework.Platform.SDL3
             }
         }
 
-        private static bool tryFetchMaximisedState(WindowState windowState, out bool maximized)
+        private static bool tryFetchMaximisedState(WindowStateMagic windowState, out bool maximized)
         {
             if (windowState is WindowState.Normal or WindowState.Maximised)
             {
@@ -716,7 +717,7 @@ namespace osu.Framework.Platform.SDL3
             return false;
         }
 
-        private void readWindowPositionFromConfig(WindowState state, Display display)
+        private void readWindowPositionFromConfig(WindowStateMagic state, Display display)
         {
             if (state != WindowState.Normal)
                 return;
@@ -916,7 +917,7 @@ namespace osu.Framework.Platform.SDL3
         /// <summary>
         /// Invoked after the window's state has changed.
         /// </summary>
-        public event Action<WindowState>? WindowStateChanged;
+        public event Action<WindowStateMagic>? WindowStateChanged;
 
         /// <summary>
         /// Invoked when the window moves.

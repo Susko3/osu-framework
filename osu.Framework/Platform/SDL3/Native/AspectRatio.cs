@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+
 namespace osu.Framework.Platform.SDL3.Native
 {
     public readonly record struct AspectRatio(float? Min, float? Max)
@@ -9,6 +11,8 @@ namespace osu.Framework.Platform.SDL3.Native
 
         internal static AspectRatio FromSDL(float min, float max)
         {
+            ArgumentOutOfRangeException.ThrowIfNegative(min);
+            ArgumentOutOfRangeException.ThrowIfNegative(max);
             return new AspectRatio(min == no_limit ? null : min, max == no_limit ? null : max);
         }
 
