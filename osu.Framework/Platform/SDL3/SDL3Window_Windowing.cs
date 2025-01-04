@@ -283,6 +283,8 @@ namespace osu.Framework.Platform.SDL3
 
         public float Scale { get; private set; } = 1;
 
+        public float DisplayScale { get; private set; } = 1;
+
         #region Displays (mostly self-contained)
 
         /// <summary>
@@ -513,6 +515,10 @@ namespace osu.Framework.Platform.SDL3
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                    break;
+
+                case SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+                    DisplayScale = SDL_GetWindowDisplayScale(SDLWindowHandle);
                     break;
             }
 

@@ -272,6 +272,8 @@ namespace osu.Framework.Platform
         /// </summary>
         float Scale { get; }
 
+        float DisplayScale { get; }
+
         /// <summary>
         /// The minimum size of the window.
         /// </summary>

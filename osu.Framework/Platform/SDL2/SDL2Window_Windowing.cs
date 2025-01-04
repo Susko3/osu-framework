@@ -279,6 +279,8 @@ namespace osu.Framework.Platform.SDL2
 
         public float Scale { get; private set; } = 1;
 
+        public float DisplayScale => Scale; // not supported on SDL2, just fall back to scale.
+
         #region Displays (mostly self-contained)
 
         /// <summary>
