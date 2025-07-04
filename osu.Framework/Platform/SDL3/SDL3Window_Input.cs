@@ -508,6 +508,9 @@ namespace osu.Framework.Platform.SDL3
 
         private void handleKeyboardEvent(SDL_KeyboardEvent evtKey)
         {
+            // GlobalEventTimestamps.LastTimestamp = (long)evtKey.timestamp;
+            GlobalEventTimestamps.LastTimestamp = GlobalEventTimestamps.GetTimestamp();
+
             Key key = evtKey.ToKey();
 
             if (key == Key.Unknown)
@@ -759,5 +762,16 @@ namespace osu.Framework.Platform.SDL3
         public event Action<TabletPenButton, bool>? PenButton;
 
         #endregion
+    }
+
+    public static class GlobalEventTimestamps
+    {
+        public static long LastTimestamp;
+
+        public static long GetTimestamp() => Stopwatch.GetTimestamp();
+        public static double GetDelta(long t1, long t2) => (double)(t2 - t1) / Stopwatch.Frequency * 1000;
+
+        public static ulong GetTimestamp_SDL() => SDL_GetTicksNS();
+        public static double GetDelta_SDL(ulong t1, ulong t2) => (t2 - t1) / 1e6;
     }
 }
