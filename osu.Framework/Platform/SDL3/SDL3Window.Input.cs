@@ -584,6 +584,9 @@ namespace osu.Framework.Platform.SDL3
                 if (!penDeviceTypes.Remove(evtPenProximity.which))
                     Logger.Log($"Unexpected SDL_EVENT_PEN_PROXIMITY_OUT for pen id={evtPenProximity.which}. Pen not in proximity.", level: LogLevel.Important);
             }
+
+            penInWindow = penDeviceTypes.Count > 0;
+            updateCursorInWindow();
         }
 
         private void handlePenMotionEvent(SDL_PenMotionEvent evtPenMotion)

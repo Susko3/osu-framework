@@ -231,6 +231,21 @@ namespace osu.Framework.Platform.SDL3
 
         public IBindable<bool> IsActive => isActive;
 
+        /// <summary>
+        /// Whether the mouse cursor is inside the window.
+        /// </summary>
+        private bool mouseInWindow;
+
+        /// <summary>
+        /// Whether any pen cursors are inside the window.
+        /// </summary>
+        private bool penInWindow;
+
+        private void updateCursorInWindow()
+        {
+            cursorInWindow.Value = mouseInWindow || penInWindow;
+        }
+
         private readonly BindableBool cursorInWindow = new BindableBool();
 
         public IBindable<bool> CursorInWindow => cursorInWindow;
@@ -520,11 +535,13 @@ namespace osu.Framework.Platform.SDL3
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER:
-                    cursorInWindow.Value = true;
+                    mouseInWindow = true;
+                    updateCursorInWindow();
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_LEAVE:
-                    cursorInWindow.Value = false;
+                    mouseInWindow = false;
+                    updateCursorInWindow();
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_RESTORED:
